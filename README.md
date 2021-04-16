@@ -1,2 +1,2 @@
-# opti
+# Optimización
 
