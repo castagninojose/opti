@@ -2,28 +2,10 @@
 import numpy as np
 
 
-def is_positive_definite(matrix):
-    """Check if `matrix` is positive definite or not using cholesky factorization.
-
-    Parameters
-    ----------
-    matrix : numpy.array
-        Matrix to check
-
-    Returns
-    -------
-        Bool indicating if `matrix` is positive definite."""
-    if np.array_equal(matrix, matrix.T):
-        try:
-            np.linalg.cholesky(matrix)
-            return True
-        except np.linalg.LinAlgError:
-            return False
-    else:
-        return False
+DEFAULT_STEP_SIZE = 0.01
 
 
-def finite_difference(callable_fun, x_zero, direction, diff_size=0.01):
+def finite_difference(callable_fun, x_zero, direction, step=DEFAULT_STEP_SIZE):
     """Compute partial derivative of `callable_fun` in direction `direction`.
 
     Parameters
@@ -34,24 +16,25 @@ def finite_difference(callable_fun, x_zero, direction, diff_size=0.01):
         Point which the differential will be evaluated at
     direction : int
         Index for the coordinate to be used as derivative direction
-    diff_size : float
+    step : float
         Step size to use for finite differences
 
     Returns
     -------
     rv : float
         Value of the derivative of `callable_fun` at `x_zero`
+
     """
     d = np.zeros(len(x_zero))
     d[direction] = 1.0
-    forward = callable_fun(x_zero + diff_size * d)
-    backward = callable_fun(x_zero - diff_size * d)
-    rv = (forward - backward) / (2 * diff_size)
+    forward = callable_fun(x_zero + step * d)
+    backward = callable_fun(x_zero - step * d)
+    rv = (forward - backward) / (2 * step)
 
     return rv
 
 
-def differential(callable_fun, x_zero, diff_size=0.01):
+def differential(callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
     """Compute differential of `callable_fun` at point `x_zero` using finite differences.
 
     Parameters
@@ -60,23 +43,22 @@ def differential(callable_fun, x_zero, diff_size=0.01):
         Function to calculate the differential to.
     x_zero : int, float or array-type
         Point which the differential will be evaluated at
-    diff_size : float
+    step : float
         Step size to use for finite differences
 
     Returns
     -------
     rv : numpy.array
         Value of the differential of `callable_fun` evaluated at `x_zero`
+
     """
     rv = []
     for direction in range(len(x_zero)):
-        rv.append(
-            finite_difference(callable_fun, x_zero, direction, diff_size=diff_size)
-        )
+        rv.append(finite_difference(callable_fun, x_zero, direction, step=step))
     return np.array(rv)
 
 
-def hessian(callable_fun, x_zero, diff_size=0.01):
+def hessian(callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
     """Compute hessian matrix of `callable_fun`.
 
     Parameters
@@ -85,16 +67,17 @@ def hessian(callable_fun, x_zero, diff_size=0.01):
         Function to calculate the differential to.
     x_zero : int, float or array-type
         Point which the differential will be evaluated at
-    diff_size : float
+    step : float
         Step size to use for finite differences
 
     Returns
     -------
     rv : numpy.array
         Hessian matrix of `callable_fun` evaluated at `x_zero`.
+
     """
     rv = []
     for direction in range(len(x_zero)):
-        partial = lambda x: finite_difference(my_fun, x, direction, diff_size=diff_size)
-        rv.append(differential(partial, x_zero, diff_size=diff_size))
+        partial = lambda x: finite_difference(callable_fun, x, direction, step=step)
+        rv.append(differential(partial, x_zero, step=step))
     return np.array(rv)
