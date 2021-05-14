@@ -1,14 +1,13 @@
 import numpy as np
+from opti.constants import NEWTON_DEFAULT_NU
 from opti.derivatives import gradient, hessian
-
-DEFAULT_TOLERANCE = 0.001
 
 
 def fixed_step_opt(
     callable_fun, start_point, step=DEFAULT_STEP_SIZE, tol=DEFAULT_TOLERANCE
 ):
     """Optimize `callable_fun` using a fixed step size the gradient's direction.
-    
+
     Parameters
     ----------
     callable_fun : function
@@ -29,7 +28,7 @@ def fixed_step_opt(
     rv = start_point
     direction = -gradient(callable_fun, x_zero=start_point)
     while np.linalg.norm(direction) < tol:
-        path = step * direction 
+        path = step * direction
         rv = rv + path
         direction = -gradient(callable_fun, x_zero=rv)
 
@@ -58,11 +57,10 @@ def newton_opt(callable_fun, start_point, tol=DEFAULT_TOLERANCE):
     direction = -gradient(callable_fun, x_zero=start_point)
     while np.linalg.norm(direction) < tol:
         hessian = hessian(callable_fun, x_zero=rv)
+        if not is_positive_definite(hessian):
+            hessian = hessian + NEWTON_DEFAULT_NU * np.identity(len(start_point))
         path = np.linalg.solve(hessian, direction)
         rv = rv + path
         direction = -gradient(callable_fun, x_zero=rv)
-    
+
     return rv
-
-
-def coordinate_opt(callable_fun, start_point)

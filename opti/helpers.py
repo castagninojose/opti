@@ -59,3 +59,26 @@ def sir_model_simulator(
         "dispo_costs": sum(dispo_costs),
         "medical_costs": sum(medical_costs),
     }
+
+
+def is_positive_definite(matrix):
+    """Check if `matrix` is positive definite or not using cholesky factorization.
+
+    Parameters
+    ----------
+    matrix : numpy.array
+        Matrix to check
+
+    Returns
+    -------
+        Bool indicating if `matrix` is positive definite.
+
+    """
+    if np.array_equal(matrix, matrix.T):
+        try:
+            np.linalg.cholesky(matrix)
+            return True
+        except np.linalg.LinAlgError:
+            return False
+    else:
+        return False

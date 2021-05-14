@@ -2,16 +2,13 @@
 import numpy as np
 
 
-DEFAULT_STEP_SIZE = 0.01
-
-
 def finite_difference(callable_fun, x_zero, direction, step=DEFAULT_STEP_SIZE):
     """Compute partial derivative of `callable_fun` in direction `direction`.
 
     Parameters
     ----------
     callable_fun : function
-        Function to calculate the differential to.
+        Function to calculate the gradient to.
     x_zero : int, float or array-type
         Point which the differential will be evaluated at
     direction : int
@@ -34,22 +31,22 @@ def finite_difference(callable_fun, x_zero, direction, step=DEFAULT_STEP_SIZE):
     return rv
 
 
-def differential(callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
-    """Compute differential of `callable_fun` at point `x_zero` using finite differences.
+def gradient callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
+    """Compute gradient of `callable_fun` at point `x_zero` using finite differences.
 
     Parameters
     ----------
     callable_fun : function
-        Function to calculate the differential to.
+        Function to calculate the gradient to.
     x_zero : int, float or array-type
-        Point which the differential will be evaluated at
+        Point which the gradient will be evaluated at
     step : float
         Step size to use for finite differences
 
     Returns
     -------
     rv : numpy.array
-        Value of the differential of `callable_fun` evaluated at `x_zero`
+        Value of the gradient of `callable_fun` evaluated at `x_zero`
 
     """
     rv = []
@@ -64,9 +61,9 @@ def hessian(callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
     Parameters
     ----------
     callable_fun : function
-        Function to calculate the differential to.
+        Function to calculate the gradient to.
     x_zero : int, float or array-type
-        Point which the differential will be evaluated at
+        Point which the gradient will be evaluated at
     step : float
         Step size to use for finite differences
 
@@ -79,5 +76,5 @@ def hessian(callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
     rv = []
     for direction in range(len(x_zero)):
         partial = lambda x: finite_difference(callable_fun, x, direction, step=step)
-        rv.append(differential(partial, x_zero, step=step))
+        rv.append(gradient(partial, x_zero, step=step))
     return np.array(rv)
