@@ -1,64 +1,6 @@
 import numpy as np
+from scipy.constants import golden_ratio
 
-
-from opti.constants import (
-    REACTION_POLICIES,
-    MIN_INFECTION_RATE,
-    LIFE_VALUE_COEFF_K,
-    DISPO_COSTS_COEFF_M,
-    DEFAULT_INFECTED_ZERO,
-    DEFAULT_G_ZERO,
-    DEFAULT_ALPHA,
-    DEFAULT_THETA,
-    DEFAULT_TOTAL_TIME,
-)
-
-
-def sir_model_simulator(
-    infected_zero=DEFAULT_INFECTED_ZERO,
-    g_zero=DEFAULT_G_ZERO,
-    alpha=DEFAULT_ALPHA,
-    theta=DEFAULT_THETA,
-    reaction_policy=REACTION_POLICIES[0],
-    coeff_k=LIFE_VALUE_COEFF_K,
-    coeff_m=DISPO_COSTS_COEFF_M,
-):
-
-    infected = [infected_zero]
-    removed = infected.copy()
-
-    medical_costs = []
-    dispo_costs = []
-
-    assert (
-        reaction_policy in REACTION_POLICIES
-    ), f"Reaction policy must be one of {REACTION_POLICIES}. Instead got: {reaction_policy}."
-
-    if reaction_policy == "short_sighted":
-        transmition_rate = g_zero / (1 + theta * alpha * infected[0])
-    else:
-        transmition_rate = g_zero / (1 + theta * alpha * removed[0])
-
-    for t in range(1, DEFAULT_TOTAL_TIME):
-        new_infections = transmition_rate * infected[t - 1] * (1 - removed[t - 1])
-        infected.append(new_infections)
-        removed.append(removed[t - 1] + new_infections)
-
-        if new_infections > MIN_INFECTION_RATE:
-            medical_costs.append(coeff_k * infected[t])
-            dispo_costs.append(coeff_m * (1 - transmition_rate / g_zero))
-
-        if reaction_policy == "short_sighted":
-            transmition_rate = g_zero / (1 + theta * alpha * infected[t])
-        else:
-            transmition_rate = g_zero / (1 + theta * alpha * removed[t])
-
-    return {
-        "infected": infected,
-        "removed": removed,
-        "dispo_costs": sum(dispo_costs),
-        "medical_costs": sum(medical_costs),
-    }
 
 
 def is_positive_definite(matrix):
@@ -82,3 +24,79 @@ def is_positive_definite(matrix):
             return False
     else:
         return False
+
+
+def linear_golden_ratio(scalar_fun, epsilon=10**(-5), rho=1):
+    """Exact linear search using the golden ratio method.
+
+    Parameters
+    ----------
+    scalar_fun : function
+        Linearization of the original function to optimize. i.e. `f(x + t * d)`
+    epsilon : float
+        Tolerance to stop iterations.
+    rho : float
+        Constant.
+    
+    Returns
+    -------
+    rv : float
+        Minimizer for `scalar_fun`.
+
+    """
+    theta_1 = 1 / golden_ratio
+    theta_2 = 1 - theta_1
+    start = 0, middle = rho, stop = 2 * rho
+    sacalar_fun_stop = scalar_fun(stop)
+    sacalar_fun_middle = scalar_fun(middle)
+
+    while sacalar_fun_stop < sacalar_fun_middle:
+        start = middle, middle = stop, stop = 2 * stop
+        sacalar_fun_middle = scalar_fun_stop
+        scalar_fun_stop = scalar_fun(stop)
+
+    first_node = start + theta_2 * (stop - start)
+    second_node = start + theta_2 * (stop - start)
+    scalar_fun_first = scalar_fun(first_node)
+    scalar_fun_second = scalar_fun(second_node)
+
+    while (stop - start) > epsilon:
+        if scalar_fun_first < scalar_fun_second:
+            stop = second_node
+            second_node = first_node
+            first_node = start + theta_1 * (stop - start)
+            scalar_fun_second = scalar_fun_first
+            scalar_fun_first = q(first_node)
+        else:
+            start = first_node
+            first_node = second_node
+            second_node = start + theta_2 * (start - stop)
+            scalar_fun_first = scalar_fun_second
+            scalar_fun_second = q(second_node)
+
+    return  0.5 * (first_node + second_node)
+
+
+def linear_armijo_rule(scalar_fun, direction, gamma=0.7, eta=0.45):
+    """Parameters
+    ----------
+    scalar_fun : function
+        Linearization of the original function to optimize. i.e. `f(x + t * d)`.
+    direction : np.array
+        Descent direction to minimize.
+    gamma : float
+        Constant.
+    eta : float
+        Constant.
+
+    Returns
+    -------
+    rv : float
+        Optimal step size that satisfies Arjimo's rule.
+
+    """
+    rv = 1
+    while scalar_fun(t) > (scalar_fun(0) + eta * rv * np.inner(direction.T, direction)):
+        rv = gamma * rv
+
+    return rv
