@@ -1,6 +1,7 @@
 import numpy as np
-from scipy.constants import golden_ratio
-
+from scipy import optimize
+from scipy.constants import golden_ratio as GOLDEN_RATIO
+from opti.constants import GRADIENT_DESCENT_STEP_SIZE_METHODS, DEFAULT_STEP_SIZE
 
 
 def is_positive_definite(matrix):
@@ -26,7 +27,7 @@ def is_positive_definite(matrix):
         return False
 
 
-def linear_golden_ratio(scalar_fun, epsilon=10**(-5), rho=1):
+def linear_golden_ratio(scalar_fun, epsilon=10 ** (-5), rho=1):
     """Exact linear search using the golden ratio method.
 
     Parameters
@@ -37,16 +38,18 @@ def linear_golden_ratio(scalar_fun, epsilon=10**(-5), rho=1):
         Tolerance to stop iterations.
     rho : float
         Constant.
-    
+
     Returns
     -------
     rv : float
         Minimizer for `scalar_fun`.
 
     """
-    theta_1 = 1 / golden_ratio
+    theta_1 = 1 / GOLDEN_RATIO
     theta_2 = 1 - theta_1
-    start = 0, middle = rho, stop = 2 * rho
+    start = (0,)
+    middle = rho
+    stop = 2 * rho
     sacalar_fun_stop = scalar_fun(stop)
     sacalar_fun_middle = scalar_fun(middle)
 
@@ -74,7 +77,7 @@ def linear_golden_ratio(scalar_fun, epsilon=10**(-5), rho=1):
             scalar_fun_first = scalar_fun_second
             scalar_fun_second = q(second_node)
 
-    return  0.5 * (first_node + second_node)
+    return 0.5 * (first_node + second_node)
 
 
 def linear_armijo_rule(scalar_fun, direction, gamma=0.7, eta=0.45):
@@ -100,3 +103,25 @@ def linear_armijo_rule(scalar_fun, direction, gamma=0.7, eta=0.45):
         rv = gamma * rv
 
     return rv
+
+
+def get_step_size(
+    callable_fun,
+    direction,
+    eval_point,
+    method,
+):
+    assert (
+        method in GRADIENT_DESCENT_STEP_SIZE_METHODS
+    ), f"Step size method must be one of {GRADIENT_DESCENT_STEP_SIZE_METHODS}. Instead got {method}."
+
+    q = lambda t: callable_fun(eval_point + t * direction)
+
+    if method == "fixed_size":
+        return DEFAULT_STEP_SIZE
+    elif method == "numpymin":
+        return optimize.fminbound(q, 0, 10)
+    elif method == "golden_ratio":
+        return linear_golden_ratio(q)
+    elif method == "armijo":
+        return linear_armijo_rule(q, direction)

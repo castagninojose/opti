@@ -1,36 +1,12 @@
 import numpy as np
-from scipy import optimize
-from opti.constants import NEWTON_DEFAULT_NU, DEFAULT_STEP_SIZE
+from opti.constants import NEWTON_DEFAULT_NU, DEFAULT_TOLERANCE
 from opti.derivatives import gradient, hessian
-from opti.helpers import linear_golden_ratio, linear_armijo_rule
-
-
-def get_step_size(
-    callable_fun,
-    direction,
-    eval_point,
-    method,
-):
-    assert (
-        method in GRADIENT_DESCENT_STEP_SIZE_METHODS
-    ), f"Step size method must be one of {GRADIENT_DESCENT_STEP_SIZE_METHODS}. Instead got {method}."
-
-    q = lambda t: callable_fun(eval_point + t * direction)
-
-    if method == "fixed_size":
-        return DEFAULT_STEP_SIZE
-    elif method == "numpymin":
-        return optimize.fminbound(q, 0, 10)
-    elif method == "golden_ratio":
-        return linear_golden_ratio(q)
-    elif method == "armijo":
-        return linear_armijo_rule(q, direction)
+from opti.helpers import linear_golden_ratio, linear_armijo_rule, get_step_size
 
 
 def gradient_descent_opt(
     callable_fun,
     start_point,
-    step=DEFAULT_STEP_SIZE,
     tol=DEFAULT_TOLERANCE,
     method="numpymin",
 ):
@@ -55,7 +31,7 @@ def gradient_descent_opt(
     """
     rv = start_point
     direction = -gradient(callable_fun, x_zero=start_point)
-    while np.linalg.norm(direction) < tol:
+    while np.linalg.norm(direction) > tol:
         step = get_step_size(callable_fun, direction, rv, method)
         path = step * direction
         rv = rv + path
