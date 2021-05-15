@@ -1,5 +1,6 @@
 """Collection of helper functions to numerically compute derivatives and differentials"""
 import numpy as np
+from opti.constants import DEFAULT_STEP_SIZE
 
 
 def finite_difference(callable_fun, x_zero, direction, step=DEFAULT_STEP_SIZE):
@@ -31,7 +32,7 @@ def finite_difference(callable_fun, x_zero, direction, step=DEFAULT_STEP_SIZE):
     return rv
 
 
-def gradient callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
+def gradient(callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
     """Compute gradient of `callable_fun` at point `x_zero` using finite differences.
 
     Parameters
