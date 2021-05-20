@@ -1,6 +1,7 @@
 """Functions to test optimization routines."""
 import numpy as np
-from opti.optimize import gradient_descent_opt
+from opti.constants import GRADIENT_DESCENT_STEP_SIZE_METHODS
+from opti.optimize import gradient_descent_opt, newton_opt
 
 
 def quadratic(x):
@@ -9,8 +10,5 @@ def quadratic(x):
 
 if __name__ == "__main__":
     x_zero = np.array([331, 31])
-    print(gradient_descent_opt(quadratic, x_zero))
-    print(gradient_descent_opt(quadratic, x_zero, method="fixed_size"))
-    print(gradient_descent_opt(quadratic, x_zero, method="golden_ratio"))
-    print(gradient_descent_opt(quadratic, x_zero, method="armijo"))
-    print(newton_opt(quadratic, x_zero))
+    for m in GRADIENT_DESCENT_STEP_SIZE_METHODS:
+        print(f"Method {m}: {gradient_descent_opt(quadratic, x_zero, method=m)}")
