@@ -1,0 +1,178 @@
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Jose Castagnino
+%%  - castagninojose@gmail.com
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt]{article}
+\usepackage{design_ASC}
+\usepackage{enumitem}
+
+
+
+\setlength\parindent{0pt} %% Do not touch this
+
+%% -----------------------------
+%% TITLE
+%% -----------------------------
+\title{Parcial Optimización} %% Assignment Title
+
+\author{Jos\'e Castagnino - 553/10\\ 
+Departamento de Matemática\\ 
+\textsc{Universidad de Buenos Aires}
+}
+
+\date{Julio 2021.}
+%% -----------------------------
+%% -----------------------------
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\setlength{\droptitle}{-5em}    
+%% %%%%%%%%%%%%%%%%%%%%%%%%%
+\maketitle
+
+\section*{Ejercicio 1}
+Dada f de clase $C^1(\mathbb{R}^n)$, considere el mapa $A: \mathbb{R}^n \rightarrow \mathbb{R}^n \times \mathbb{R}^n$, $A(x): x \rightarrow (x, d)$, donde d satisface:
+
+\[ ||d|| \geq \beta || \nabla f(x) || \ \ \ \ \  \beta > 0 \]
+\[ \nabla f(x)^T d \leq - \theta || \nabla f(x) || ||d|| \ \ \ \ \ (0<\theta \leq 1) \]
+
+\begin{enumerate}[label=(\alph*)]
+    \item Interprete el significado de estas condiciones para $d$
+    \item ¿Es el mapa $A$ cerrado en un $x$ tal que $\nabla f(x) \neq 0$?
+    \item Si sólo se pidiera $\nabla f(x)^T d < 0$ ($d$ dirección de descenso en $x$), ¿sería cerrado?
+\end{enumerate}
+
+$\textit{Solución:}$ a) La primera de las condiciones le impone a $d$ una longitud mínima proporcional al gradiente de $f(x)$ y, suponiendo $\nabla f(x) \neq 0$, de norma estrictame positiva.
+
+\bigskip
+Para analizar la segunda desigualdad (suponiendo $\nabla f(x) \neq 0$) la reescribo como
+
+\[ \frac{\nabla f(x)^T d}{|| \nabla f(x) ||||d||} \leq - \theta \]
+
+\bigskip
+\bigskip
+Recordando ahora la definición del ángulo que forman dos vectores cualesquiera $x, y \in \mathbb{R}^n$ no nulos, es fácil interpretar geométricamente la desigualdad como un \textit{limite a la ortogonalidad} entre $d$ y $\nabla f(x)$. Es decir que $d$ está en la región coloreada de la figura 1. En el caso de que usemos a $d$ como una dirección de descenso, esta condición nos evita el inconveniente de tomar direcciones de descenso muy cercanas al ortogonal del gradiente de $f$, lo que puede resultar en que nuestra función objetivo disminuya pero muy poco.
+
+\bigskip
+\begin{center}
+  \includegraphics[width=7cm, height=7cm]{direcciones_ej1.png}
+  \begin{figure}[!h]
+  \caption{Direcciones habilitadas por la segunda desigualdad}
+  \end{figure}
+\end{center}
+
+\bigskip
+\bigskip
+b) Sea $x \in \mathbb{R}^n$ tal que $\nabla f(x) \neq 0$ y sean $x_n \subset \mathbb{R}^n, \ y_n \subset A(x_n)$ tales que $x_n \rightarrow x$, $y_n \rightarrow y$. Observemos que $A$ no modifica a $x$, por lo tanto definiendo $\bar{d} = \lim d_n$, tenemos que $y_n = (x_n, d_n) \rightarrow (x, \bar{d})$ dado que $x_n \rightarrow x$. Nos alcanza entonces ver que $\bar{d}$ cumple las desigualdades para probar que $A$ es cerrado en $x$.
+
+\bigskip
+Para la primera desigualdad, como $y_n \in A(x_n)$, tenemos que $||d_n|| \geq \beta ||\nabla f(x_n)||$. Al ser $f \in C^1$ y $||.||$ una función continua, podemos tomar límite en la desigualdad anterior, obteniendo 
+\[ ||\bar{d}|| \geq \beta ||\nabla f(x)||. \]
+
+\bigskip
+Para la segunda sabemos también que $ \langle d_n, \nabla f(x_n) \rangle \leq -\theta ||d_n|| ||\nabla f(x_n)||$. Teniendo en cuenta que el producto interno también es continuo podemos entonces, como antes, tomar límite a ambos lados de la expresión, y así
+\[ \langle \bar{d}, \nabla f(x) \rangle \leq -\theta ||\bar{d}|| ||\nabla f(x)||. \]
+Luego, $\bar{d} \in A(x)$ y por lo tanto $A$ resulta cerrado en $x$.
+
+\bigskip
+\bigskip
+c) En caso de relajar la segunda condición pidiendo que $\langle \nabla f(x_n), d_n \rangle < 0$ podría darse el caso extremo en que $\bar{d} \perp \nabla f(x)$ y todas las $d_n$ cumplan la condición pero al pasar al límite se rompa ya que $\langle \nabla f(x), \bar{d} \rangle = 0.$
+
+\bigskip
+\section*{Ejercicio 2}
+Dados $N$ puntos $(x_i, y_i, z_i)$ en $\mathbb{R}^3$, hallar la ecuación del plano que mejor los aproxima en el sentido de que la suma de las distancias al cuadrado de cada uno de los puntos sea mínima ($||\ ||_2$). ¿Coincide este plano con el de cuadrados mínimos obtenido ajustando una función $z = ax + by + c$ que minimiza el error $\epsilon(a,b,c) = \sum_{i=1}^N (z_i-(ax_i+by_i+cz_i))^2$?
+
+\bigskip
+$\textit{Solución:}$ Busco la ecuación de un plano $\Pi : ax + by + cz = d$. Notar que el vector $v = (a, b, c)$ es normal al plano. Sin pérdida de generalidad, supongamos que $||v|| = 1$, es decir $a^2+b^2+c^2 = 1.$ De este modo, para cada $u \in \mathbb{R}^3$, tenemos que la distancia de $u$ a $\Pi$ viene dada por $d(u, \Pi) = P^{\perp}_v (u) - d = au_1 + bu_2 + cu_3 - d.$
+Luego, si notamos $\delta_i = ax_i + by_i + cz_i - d$, lo que buscamos es minimizar $f$ definida por
+
+\[ f(a, b, c, d) = \sum_{i=1}^N \delta_i^2 \]
+sujeto a que $a^2+b^2+c^2 = 1.$ Se trata de un problema de minimización con una única restricción de igualdad dada por $h(a,b,c,d) = a^2+b^2+c^2 - 1.$ Calculemos los gradientes correspondientes. 
+
+\[
+\nabla f = 2 \bigg[ \sum_{i=1}^N \delta_i x_i; \sum_{i=1}^N \delta_i y_i; \sum_{i=1}^N \delta_i z_i; \sum_{i=1}^N \delta_i (-1) \bigg]
+\]
+
+\[ \nabla h = [2a, 2b, 2c, 0] \]
+
+\bigskip
+Según las condiciones de KKT, $x^* = (a^*, b^*, c^*, d^*)$ será un mínimo si $\exists \lambda \in \mathbb{R}$ tal que $\nabla f(x^*) + \lambda \nabla h(x^*) = 0$, lo que nos da las siguientes 4 ecuaciones:
+
+\begin{equation}
+    \begin{cases}
+          \sum_i \delta_i x_i = \lambda a \\
+          \sum_i \delta_i y_i = \lambda b \\
+          \sum_i \delta_i z_i = \lambda c \\
+          -2 \sum_i \delta_i = 0.
+    \end{cases}
+\end{equation}
+
+
+\bigskip
+De la última ecuación tenemos que $ \sum_{i=1}^N \delta_i = 0$, y reemplazando $\delta_i$ por su definición obtenemos fácilmente que $d = \frac{1}{N} \sum_{i=1}^N ax_i + by_i + cz_i.$ Notemos que reemplazando este valor en las otras ecuaciones, obtenemos un sistema de 3 ecuaciones y cuatro incógnitas: $a, b, c$ y $\lambda$. Para lo que resta de la cuenta introduzco otra notación para las medias de los $N$ puntos, es decir $\bar{X} = \frac{1}{N} \sum x_i$, y análogamente para $\bar{Y}$ y $\bar{Z}.$ De esta manera, tenemos que $d = \bar{X}a + \bar{Y}b + \bar{Z}c$. Con esta relación, podemos reescribir la primera de las ecuaciones de (1):
+
+
+\[
+\begin{split}
+    0
+    & = \sum_{i=1}^N x_i \big( ax_i + by_i + cz_i - \bar{X}a - \bar{Y}b - \bar{Z}c \big) + \lambda a \\
+    & = a \lambda + \sum_{i=1}^N (x_i^2 - x_i \bar{X}) a + \sum_{i=1}^N (x_i y_i - x_i \bar{Y}) b +  \sum_{i=1}^N (x_i z_i - x_i \bar{Z}) c 
+\end{split}
+\]
+De manera completamente análoga pero usando las otras ecuaciones, obtenemos que (1) es equivalente a:
+\[
+\begin{cases}
+      a \lambda + \sum (x_i^2 - x_i \bar{X}) a + \sum (x_i y_i - x_i \bar{Y}) b +  \sum (x_i z_i - x_i \bar{Z}) c = 0\\
+      \sum (y_ix_i - y_i \bar{X}) a + \lambda b + \sum (y_i^2 - y_i \bar{Y}) b +  \sum (y_i z_i - y_i \bar{Z}) c  = 0\\
+      \lambda c + \sum (z_ix_i - z_i \bar{X}) a + \sum (z_iy_i - z_i \bar{Y}) b + \sum (z_i^2 - z_i \bar{Z}) c = 0 \\
+\end{cases}     
+\]
+que se puede expresar de manera matricial como
+
+\[
+\begin{bmatrix}
+\lambda + \sum x_i^2 - x_i\bar{X} & \sum x_iy_i - x_i\bar{Y} & \sum x_iz_i - x_i\bar{Z} \\
+\sum y_ix_i-y_i\bar{X} & \lambda + \sum y_i^2-y_i\bar{Y} & \sum y_iz_i-y_i \bar{Y} \\
+\sum z_ix_i-z_i\bar{X} & \sum z_iy_i-z_i\bar{Y} & \lambda + \sum z_i^2-z_i\bar{Z}
+\end{bmatrix}
+\begin{bmatrix}
+    a \\
+    b \\
+    c
+\end{bmatrix} = 
+\begin{bmatrix}
+    0 \\
+    0 \\
+    0
+\end{bmatrix}
+\]
+
+Es decir que $(a, b, c)$ es el autovector de autovalor $\lambda$ de la matriz
+\[
+\begin{bmatrix}
+\sum x_i^2 - x_i\bar{X} & \sum x_iy_i - x_i\bar{Y} & \sum x_iz_i - x_i\bar{Z} \\
+\sum y_ix_i-y_i\bar{X} & \sum y_i^2-y_i\bar{Y} & \sum y_iz_i-y_i \bar{Z} \\
+\sum z_ix_i-z_i\bar{X} & \sum z_iy_i-z_i\bar{Y} & \sum z_i^2-z_i\bar{Z}
+\end{bmatrix}
+\]
+\bigskip
+\bigskip
+\bigskip
+
+Por último observemos que este procedimiento \(\mathbf{no}\) es lo mismo que ajustar una función \(z = ax + by + c \) minimizando el error cuadrático, ya que en ese caso estaríamos midiendo el error en la dirección $z$, que no coincide con medir la distancia ortogonal a $\Pi$ (salvo en el caso particular en que \(\Pi \perp z\)).
+
+\bigskip
+\section*{Ejercicio 3}
+\bigskip
+Considere el teorema de gradientes conjugados parciales del Luenberger, 4ta edición, página 275. Interprete la elección de $\frac{1}{2}(a + b)$ como haber tomado la raíz del primer polinomio de Chebichef en $[a, b]$. Rehaga la demostración usando propiedades de la norma del polinomio de Chebichef, y generalícela a elegir el k-ésimo polinomio en $[a, b]$. ¿Qué fórmula obtiene para el decrecimiento del error luego de realizar $m + k$ pasos?
+
+\bigskip
+$\mathbf{Teorema}.$ Sea $Q$ una matriz simétrica definida positiva con $n-m$ autovalores en el intervalo $[a, b], \ a>0$ y los restantes $m$ autovalores mayores a $b$. Entonces el método de gradientes conjugados parciales reiniciado cada $m+1$ pasos, cumple
+\[ E(x_{k+1}) \leq \bigg( \frac{b-a}{b+a} \bigg)^2 E(x_k). \]
+$\textit{Demostración}:$ Sabemos que en el método de gradientes conjugados, tenemos que el error en el paso $k+1$ es a lo sumo
+\[ E(x_{k+1}) \leq \max_{\lambda \in \Lambda} [1 + \lambda P_k(\lambda)]^2 E(x_0) \]
+para cualquier polinomio $P_k$ de grado k donde $\Lambda$ es el conjunto de todos los autovalores de $Q$. Elijamos $P$ de manera tal que el polinomio de grado $m+1$ dado por $q(\lambda) = 1 + \lambda P(\lambda)$ se anula en $\frac{a+b}{2}$ y en los $m$ autovalores grandes de $Q.$
+
+
+\end{document}
