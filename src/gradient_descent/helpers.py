@@ -1,8 +1,12 @@
 import numpy as np
 from scipy import optimize
 from scipy.constants import golden_ratio as GOLDEN_RATIO
-from opti.constants import GRADIENT_DESCENT_STEP_SIZE_METHODS, DEFAULT_STEP_SIZE
-from opti.derivatives import gradient
+
+from src.gradient_descent.constants import (
+    DEFAULT_STEP_SIZE,
+    GRADIENT_DESCENT_STEP_SIZE_METHODS,
+)
+from src.gradient_descent.derivatives import gradient
 
 
 def is_positive_definite(matrix):
@@ -51,14 +55,14 @@ def linear_golden_ratio(scalar_fun, epsilon=10 ** (-5), rho=1):
     start = 0
     middle = rho
     stop = 2 * rho
-    sacalar_fun_stop = scalar_fun(stop)
-    sacalar_fun_middle = scalar_fun(middle)
+    scalar_fun_stop = scalar_fun(stop)
+    scalar_fun_middle = scalar_fun(middle)
 
-    while sacalar_fun_stop < sacalar_fun_middle:
+    while scalar_fun_stop < scalar_fun_middle:
         start = middle
         middle = stop
         stop = 2 * stop
-        sacalar_fun_middle = scalar_fun_stop
+        scalar_fun_middle = scalar_fun_stop
         scalar_fun_stop = scalar_fun(stop)
     first_node = start + theta_2 * (stop - start)
     second_node = start + theta_2 * (stop - start)
@@ -144,7 +148,7 @@ def get_step_size(
         method in GRADIENT_DESCENT_STEP_SIZE_METHODS
     ), f"Step size method must be one of {GRADIENT_DESCENT_STEP_SIZE_METHODS}. Instead got {method}."
 
-    q = lambda t: objective_fun(eval_point + t * direction)
+    q = lambda t: objective_fun(eval_point + t * direction)  # noqa
 
     linear_wolfe_rule(objective_fun, eval_point, q, direction)
 

@@ -1,6 +1,7 @@
 """Collection of helper functions to numerically compute derivatives and differentials"""
 import numpy as np
-from opti.constants import DEFAULT_STEP_SIZE
+
+from src.gradient_descent.constants import DEFAULT_STEP_SIZE
 
 
 def finite_difference(callable_fun, x_zero, direction, step=DEFAULT_STEP_SIZE):
@@ -76,6 +77,8 @@ def hessian(callable_fun, x_zero, step=DEFAULT_STEP_SIZE):
     """
     rv = []
     for direction in range(len(x_zero)):
-        partial = lambda x: finite_difference(callable_fun, x, direction, step=step)
+        partial = lambda x: finite_difference(  # noqa
+            callable_fun, x, direction, step=step  # pylint: disable=cell-var-from-loop
+        )
         rv.append(gradient(partial, x_zero, step=step))
     return np.array(rv)
