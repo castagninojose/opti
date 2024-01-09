@@ -1,16 +1,12 @@
 import numpy as np
 
-from opti.gradient_descent.constants import (
+from src.gradient_descent.constants import (
     DEFAULT_TOLERANCE,
     MAX_ITER,
     NEWTON_DEFAULT_NU,
 )
-from opti.gradient_descent.derivatives import gradient, hessian
-from opti.gradient_descent.helpers import (
-    get_step_size,
-    linear_armijo_rule,
-    linear_golden_ratio,
-)
+from src.gradient_descent.derivatives import gradient, hessian
+from src.gradient_descent.helpers import get_step_size, is_positive_definite
 
 
 def gradient_descent_opt(
@@ -67,14 +63,14 @@ def newton_opt(objective_fun, start_point, tol=DEFAULT_TOLERANCE):
 
     """
     rv = start_point
-    iter = 0
+    iteration = 0
     direction = -gradient(objective_fun, x_zero=start_point)
-    while (np.linalg.norm(direction) < tol) & (iter < MAX_ITER):
-        iter += 1
-        hessian = hessian(objective_fun, x_zero=rv)
-        if not is_positive_definite(hessian):
-            hessian = hessian + NEWTON_DEFAULT_NU * np.identity(len(start_point))
-        path = np.linalg.solve(hessian, direction)
+    while (np.linalg.norm(direction) < tol) & (iteration < MAX_ITER):
+        iteration += 1
+        hess = hessian(objective_fun, x_zero=rv)
+        if not is_positive_definite(hess):
+            hess = hess + NEWTON_DEFAULT_NU * np.identity(len(start_point))
+        path = np.linalg.solve(hess, direction)
         rv = rv + path
         direction = -gradient(objective_fun, x_zero=rv)
 

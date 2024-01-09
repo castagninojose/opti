@@ -2,11 +2,11 @@ import numpy as np
 from scipy import optimize
 from scipy.constants import golden_ratio as GOLDEN_RATIO
 
-from opti.gradient_descent.constants import (
+from src.gradient_descent.constants import (
     DEFAULT_STEP_SIZE,
     GRADIENT_DESCENT_STEP_SIZE_METHODS,
 )
-from opti.gradient_descent.derivatives import gradient
+from src.gradient_descent.derivatives import gradient
 
 
 def is_positive_definite(matrix):
