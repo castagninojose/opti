@@ -1,6 +1,6 @@
 """Collection of helper functions to numerically compute derivatives and differentials"""
 import numpy as np
-from opti.constants import DEFAULT_STEP_SIZE
+from opti.gradient_descent.constants import DEFAULT_STEP_SIZE
 
 
 def finite_difference(callable_fun, x_zero, direction, step=DEFAULT_STEP_SIZE):

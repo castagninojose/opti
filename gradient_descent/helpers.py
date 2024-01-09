@@ -1,8 +1,8 @@
 import numpy as np
 from scipy import optimize
 from scipy.constants import golden_ratio as GOLDEN_RATIO
-from opti.constants import GRADIENT_DESCENT_STEP_SIZE_METHODS, DEFAULT_STEP_SIZE
-from opti.derivatives import gradient
+from opti.gradient_descent.constants import GRADIENT_DESCENT_STEP_SIZE_METHODS, DEFAULT_STEP_SIZE
+from opti.gradient_descent.derivatives import gradient
 
 
 def is_positive_definite(matrix):

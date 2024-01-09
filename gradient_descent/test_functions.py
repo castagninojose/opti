@@ -1,7 +1,7 @@
 """Functions to test optimization routines."""
 import numpy as np
-from opti.constants import GRADIENT_DESCENT_STEP_SIZE_METHODS
-from opti.optimize import gradient_descent_opt, newton_opt
+from opti.gradient_descent.constants import GRADIENT_DESCENT_STEP_SIZE_METHODS
+from opti.gradient_descent.optimize import gradient_descent_opt, newton_opt
 
 
 def quadratic(x):

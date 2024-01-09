@@ -1,7 +1,7 @@
 import numpy as np
-from opti.constants import NEWTON_DEFAULT_NU, DEFAULT_TOLERANCE, MAX_ITER
-from opti.derivatives import gradient, hessian
-from opti.helpers import linear_golden_ratio, linear_armijo_rule, get_step_size
+from opti.gradient_descent.constants import NEWTON_DEFAULT_NU, DEFAULT_TOLERANCE, MAX_ITER
+from opti.gradient_descent.derivatives import gradient, hessian
+from opti.gradient_descent.helpers import linear_golden_ratio, linear_armijo_rule, get_step_size
 
 
 def gradient_descent_opt(
