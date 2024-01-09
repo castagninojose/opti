@@ -3,7 +3,9 @@ name = "opti"
 version = "0.1.0"
 description = ""
 authors = ["José Castagnino"]
-readme = "README.md"
+packages = [
+  {include = "gradient_descent", from='lib'}, {include = "rein_learning", from='lib'}
+]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
@@ -22,6 +24,7 @@ flake8 = "^5.0.4"
 mypy = "^0.971"
 pdbpp = "^0.10.3"
 importlib-resources = "^5.9.0"
+jupyter = "^1.0.0"
 
 [tool.black]
 line_length = 88
