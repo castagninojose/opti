@@ -14,9 +14,27 @@ class Board:
         Dictionary representation for the legal actions in the game. Keys are states and
         values are the legal actions in such state in all directions also represented as
         a dictionary.
+            {
+                1: {'left': 1, 'up': 1, 'right': 2, 'down': 4},
+                2: {'left': 1, 'up': 2, 'right': 3, 'down': 5},
+                3: {'left': 2, 'up': 3, 'right': 4, 'down': 6},
+                4: {'left': 4, 'up': 4, 'right': 4, 'down': 8},
+                5: {'left': 5, 'up': 1, 'right': 6, 'down': 9},
+                .
+                .
+                .
+            }
     policy: dict
         Similar to `board`, the policy is represented as a dict and this time the values
         represent probabilities instead of legal moves.
+            {
+                1: {'left': 0.25, 'up': 0.25, 'right': 0.25, 'down': 0.25},
+                2: {'left': 0.25, 'up': 0.25, 'right': 0.25, 'down': 0.25},
+                .
+                .
+                .
+            }
+
     graph: nx.DiGraph
         Graph representation, useful to visualize and navigate the board.
     non_terminals : list
