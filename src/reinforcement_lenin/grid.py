@@ -32,12 +32,41 @@ class Board:
     def get_proba(
         self, state, future_state, action, reward=-1
     ):  # pylint: disable=unused-argument
+        """
+        Compute the conditional probability of getting `reward` in `future_state` coming
+        from `state` and performing `action`.
+
+        Parameters
+        ----------
+        state: int
+            Current state. Between 1 and 14.
+        future_state: int
+            Future state. Between 1 and 14.
+        action: str
+            One of 'left', 'up', 'right' or 'down' (see ACTIONS@constants.py).
+        reward: float
+            Expected reward given after `action` in `state`.
+
+        Returns
+        -------
+        float
+            Either 1 or 0 for now =p
+
+        """
         if self.board[state][action] == future_state:
             return 1
         else:
             return 0
 
     def as_numpy(self):
+        """Represent the board in numpy format. Takes no arguments.
+
+        Returns
+        -------
+        np.array
+            Matrix representation of the game board.
+
+        """
         nodes = np.array(self.graph.nodes)
         return np.reshape(nodes, (self.board_size, self.board_size))
 
