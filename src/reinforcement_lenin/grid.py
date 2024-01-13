@@ -5,7 +5,33 @@ from src.reinforcement_lenin.constants import ACTIONS
 
 
 class Board:
+    """Representation of the board for a GridWorld game as described in Burton-Sutton,
+    example 3.5 (p.60).
+
+    Attributes
+    ----------
+    board: dict
+        Dictionary representation for the legal actions in the game. Keys are states and
+        values are the legal actions in such state in all directions also represented as
+        a dictionary.
+    policy: dict
+        Similar to `board`, the policy is represented as a dict and this time the values
+        represent probabilities instead of legal moves.
+    graph: nx.DiGraph
+        Graph representation, useful to visualize and navigate the board.
+    non_terminals : list
+        List of states that are not terminal (e.g. 0 or 15).
+
+    """
+
     def __init__(self, N: int = 4):
+        """
+        Parameters
+        ----------
+        N : int
+            Number of rows and columns for the board. Total nodes: N².
+
+        """
         self.board_size = N**2
         self.board: dict = {0: dict()}
         self.policy: dict = {1: dict()}
@@ -106,3 +132,4 @@ class Board:
 if __name__ == "__main__":
     juego_1 = Board()
     print(juego_1.evaluate_policy(0.5, -1, 0.5))
+    juego_1.plot_graph()
