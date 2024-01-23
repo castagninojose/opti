@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 
-from src.reinforcement_lenin.constants import ACTIONS, DEFAULT_POLICY
+from src.reinforcement_lenin.constants import ACTIONS, DEFAULT_STATE_POLICY
 
 
 class Board:
@@ -51,10 +51,13 @@ class Board:
 
         """
         self.board_size = N**2
+
+        self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
+        self.policy[0][:] = np.array([0.5, 0.5, 0, 0])
+        self.policy[N - 1][:] = np.array([0, 0, 0.5, 0.5])
+
         self.board: dict = {0: dict()}
-        self.policy: dict = {0: {'left': 0.5, 'up': 0.5, 'right': 0, 'down': 0}}
         for k in range(1, self.board_size - 1):
-            self.policy[k] = DEFAULT_POLICY
             self.board[k] = {'left': k - 1, 'up': k - N, 'right': k + 1, 'down': k + N}
             if k - N < 0:
                 self.board[k]['up'] = k
@@ -65,19 +68,13 @@ class Board:
             if k % N == N - 1:
                 self.board[k]['right'] = k
         self.board[self.board_size - 1] = dict()
-        self.policy[self.board_size - 1] = {
-            'left': 0,
-            'up': 0,
-            'right': 0.5,
-            'down': 0.5,
-        }
+
+        self.non_terminals = list(self.board.keys())[1:-1]
 
         self.graph = nx.DiGraph()
         for k, n in self.board.items():
             for direction in n.values():
                 self.graph.add_edge(k, direction)
-
-        self.non_terminals = list(self.board.keys())[1:-1]
 
     def get_proba(
         self, state, future_state, action, reward=-1
@@ -121,10 +118,17 @@ class Board:
         return np.reshape(nodes, (self.board_size, self.board_size))
 
     def value_function(self, action, state, future_state, reward, discount_rate):
+        """I am a function. That's all I know."""
         proba = self.get_proba(state, future_state, action, reward=reward)
-        return (self.policy[future_state][action] * discount_rate + reward) * proba
+        return (
+            self.policy[future_state][ACTIONS[action]] * discount_rate + reward
+        ) * proba
 
     def get_action_value_function(self, action, state, reward, discount_rate):
+        """Compute the expected return coming from `state`, taking `action` and
+        following the current policy (`self.policy`)
+
+        """
         rv = 0
         for future_state in self.board.keys():
             rv += self.value_function(
@@ -134,23 +138,24 @@ class Board:
         return rv
 
     def evaluate_policy(self, discount_rate: float, reward: float, tolerance: float):
+        """The expected return when starting from each `state` and following
+        `self.policy` from then on.
+
+        """
         policy_value = np.zeros(len(self.board))
         delta = 1
         while delta > tolerance:
             delta = 0
             for state in self.non_terminals:
                 v = policy_value[state]
-                for action in ACTIONS:
-                    expected_value = sum(
-                        [
-                            self.value_function(action, state, f, reward, discount_rate)
-                            for f in self.board.keys()
-                        ]
+                for action in ACTIONS.keys():
+                    expected_value = self.get_action_value_function(
+                        action, state, reward, discount_rate
                     )
                     partial_sum = sum(
                         [
-                            self.policy[state][action] * expected_value
-                            for action in ACTIONS
+                            self.policy[state][ACTIONS[action]] * expected_value
+                            for action in ACTIONS.keys()
                         ]
                     )
                 policy_value[state] = partial_sum
@@ -159,12 +164,34 @@ class Board:
         return policy_value
 
     def iterate_policy(self, discount_rate: float, reward: float, tolerance: float):
-        # rv = self.evaluate_policy(discount_rate, reward, tolerance)
-        # policy_stable = True
-        # for state in self.non_terminals:
-        #     old_action = self.policy[state]
-        # self.policy[]
-        pass
+        while True:
+            rv = self.evaluate_policy(discount_rate, reward, tolerance)
+            policy_stable = True
+            for state in self.non_terminals:
+                old_action = self.policy[state]
+                q_actn_state = {
+                    act: self.get_action_value_function(
+                        act, state, reward, discount_rate
+                    )
+                    for act in ACTIONS.keys()
+                }
+                argmaxs = [
+                    k
+                    for k, v in q_actn_state.items()
+                    if v == max(q_actn_state.values())
+                ]
+                for action in ACTIONS.keys():
+                    if action in argmaxs:
+                        self.policy[state][ACTIONS[action]] = 1 / len(argmaxs)
+                    else:
+                        self.policy[state][ACTIONS[action]] = 0
+                if not (old_action == self.policy[state]).all():
+                    policy_stable = False
+
+            if policy_stable:
+                return rv, self.policy
+            else:
+                continue
 
     def plot_graph(self):
         nx.draw(self.graph, with_labels=True)
@@ -172,7 +199,16 @@ class Board:
 
 if __name__ == "__main__":
     juego_1 = Board()
-    for gamma in [0, 0.2, 0.4, 0.5, 0.6, 0.8, 1]:
+    for gamma in [
+        # 0,
+        0.2,
+        # 0.4,
+        0.5,
+        # 0.6,
+        # 0.8,
+        # 1
+    ]:
         print(f"ESTO ES GAMMA: {gamma}")
-        print(juego_1.evaluate_policy(gamma, -1, 0.1))
-    # juego_1.plot_graph()
+
+        # print(juego_1.evaluate_policy(gamma, -1, 0.1))
+        print(juego_1.iterate_policy(gamma, -1, 0.01))
