@@ -54,7 +54,7 @@ class Board:
 
         self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
         self.policy[0][:] = np.array([0.5, 0.5, 0, 0])
-        self.policy[N - 1][:] = np.array([0, 0, 0.5, 0.5])
+        self.policy[self.board_size - 1][:] = np.array([0, 0, 0.5, 0.5])
 
         self.board: dict = {0: dict()}
         for k in range(1, self.board_size - 1):
@@ -117,14 +117,16 @@ class Board:
         nodes = np.array(self.graph.nodes)
         return np.reshape(nodes, (self.board_size, self.board_size))
 
-    def value_function(self, action, state, future_state, reward, discount_rate):
+    def value_function(
+        self, action, state, future_state, reward, discount_rate, policy_value
+    ):
         """I am a function. That's all I know."""
         proba = self.get_proba(state, future_state, action, reward=reward)
-        return (
-            self.policy[future_state][ACTIONS[action]] * discount_rate + reward
-        ) * proba
+        return (policy_value[future_state] * discount_rate + reward) * proba
 
-    def get_action_value_function(self, action, state, reward, discount_rate):
+    def get_action_value_function(
+        self, action, state, reward, discount_rate, policy_value
+    ):
         """Compute the expected return coming from `state`, taking `action` and
         following the current policy (`self.policy`)
 
@@ -132,7 +134,7 @@ class Board:
         rv = 0
         for future_state in self.board.keys():
             rv += self.value_function(
-                action, state, future_state, reward, discount_rate
+                action, state, future_state, reward, discount_rate, policy_value
             )
 
         return rv
@@ -149,16 +151,14 @@ class Board:
             for state in self.non_terminals:
                 v = policy_value[state]
                 for action in ACTIONS.keys():
-                    expected_value = self.get_action_value_function(
-                        action, state, reward, discount_rate
-                    )
-                    partial_sum = sum(
-                        [
-                            self.policy[state][ACTIONS[action]] * expected_value
-                            for action in ACTIONS.keys()
-                        ]
-                    )
-                policy_value[state] = partial_sum
+                    partial_sum = [
+                        self.policy[state][ACTIONS[action]]
+                        * self.get_action_value_function(
+                            action, state, reward, discount_rate, policy_value
+                        )
+                        for action in ACTIONS.keys()
+                    ]
+                policy_value[state] = sum(partial_sum)
 
                 delta = max(delta, abs(v - policy_value[state]))
         return policy_value
@@ -168,26 +168,28 @@ class Board:
             rv = self.evaluate_policy(discount_rate, reward, tolerance)
             policy_stable = True
             for state in self.non_terminals:
-                old_action = self.policy[state]
+                old_action = self.policy[state].copy()
                 q_actn_state = {
                     act: self.get_action_value_function(
-                        act, state, reward, discount_rate
+                        act, state, reward, discount_rate, rv
                     )
                     for act in ACTIONS.keys()
                 }
-                argmaxs = [
+                max_acts = [
                     k
                     for k, v in q_actn_state.items()
                     if v == max(q_actn_state.values())
                 ]
                 for action in ACTIONS.keys():
-                    if action in argmaxs:
-                        self.policy[state][ACTIONS[action]] = 1 / len(argmaxs)
+                    if action in max_acts:
+                        self.policy[state][ACTIONS[action]] = 1 / len(max_acts)
                     else:
                         self.policy[state][ACTIONS[action]] = 0
                 if not (old_action == self.policy[state]).all():
                     policy_stable = False
 
+            print(f"Reward hasta ahora: {rv}")
+            print(f"Politica hoy: \n{self.policy}")
             if policy_stable:
                 return rv, self.policy
             else:
@@ -198,17 +200,7 @@ class Board:
 
 
 if __name__ == "__main__":
-    juego_1 = Board()
-    for gamma in [
-        # 0,
-        0.2,
-        # 0.4,
-        0.5,
-        # 0.6,
-        # 0.8,
-        # 1
-    ]:
-        print(f"ESTO ES GAMMA: {gamma}")
+    juego_1 = Board(4)
 
-        # print(juego_1.evaluate_policy(gamma, -1, 0.1))
-        print(juego_1.iterate_policy(gamma, -1, 0.01))
+    aver = juego_1.evaluate_policy(0, -1, 0.1)
+    reward1, policy1 = juego_1.iterate_policy(0, -1, 0.1)
