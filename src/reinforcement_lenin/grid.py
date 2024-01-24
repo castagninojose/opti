@@ -55,6 +55,7 @@ class Board:
         self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
         self.policy[0][:] = np.array([0.5, 0.5, 0, 0])
         self.policy[self.board_size - 1][:] = np.array([0, 0, 0.5, 0.5])
+        # self.policy = OPTIMAL_POLICY
 
         self.board: dict = {0: dict()}
         for k in range(1, self.board_size - 1):
@@ -201,6 +202,5 @@ class Board:
 
 if __name__ == "__main__":
     juego_1 = Board(4)
-
     aver = juego_1.evaluate_policy(0, -1, 0.1)
     reward1, policy1 = juego_1.iterate_policy(0, -1, 0.1)
