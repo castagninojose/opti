@@ -241,8 +241,7 @@ class Board:
 def main(length, gamma, theta, reward, policy):
     juego_1 = Board(length, policy)
     # aver = juego_1.evaluate_policy(gamma, -1, theta)
-    # print(aver.reshape(length, length))
-    reward1, policy1 = juego_1.iterate_policy(0.9, -1, 0.1)
+    _, policy1 = juego_1.iterate_policy(gamma, reward, theta)
     print(policy1)
 
 
