@@ -1,7 +1,12 @@
+import click
 import networkx as nx
 import numpy as np
 
-from src.reinforcement_lenin.constants import ACTIONS, DEFAULT_STATE_POLICY
+from src.reinforcement_lenin.constants import (
+    ACTIONS,
+    DEFAULT_STATE_POLICY,
+    OPTIMAL_POLICY,
+)
 
 
 class Board:
@@ -42,7 +47,7 @@ class Board:
 
     """
 
-    def __init__(self, N: int = 4):
+    def __init__(self, N: int = 4, policy: str = 'random'):
         """
         Parameters
         ----------
@@ -52,17 +57,19 @@ class Board:
         """
         self.board_size = N**2
 
-        self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
-        self.policy[0][:] = np.array([0.5, 0.5, 0, 0])
-        self.policy[self.board_size - 1][:] = np.array([0, 0, 0.5, 0.5])
-        # self.policy = OPTIMAL_POLICY
+        if policy == 'random':
+            self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
+            self.policy[0][:] = np.array([0.5, 0.5, 0, 0])
+            self.policy[self.board_size - 1][:] = np.array([0, 0, 0.5, 0.5])
+        elif policy == 'optimal':
+            self.policy = OPTIMAL_POLICY
 
         self.board: dict = {0: dict()}
         for k in range(1, self.board_size - 1):
             self.board[k] = {'left': k - 1, 'up': k - N, 'right': k + 1, 'down': k + N}
             if k - N < 0:
                 self.board[k]['up'] = k
-            if k + N >= self.board_size - 1:
+            if k + N >= self.board_size:
                 self.board[k]['down'] = k
             if k % N == 0:
                 self.board[k]['left'] = k
@@ -76,6 +83,11 @@ class Board:
         for k, n in self.board.items():
             for direction in n.values():
                 self.graph.add_edge(k, direction)
+
+        # for k, n in self.board.items():
+        #     for direction in n.values():
+        #         self.graph.add_edge(k, n[direction])
+        #         self.graph.edges[k, n[direction]]["weight"] = self.policy[k][direction]
 
     def get_proba(
         self, state, future_state, action, reward=-1
@@ -121,7 +133,27 @@ class Board:
     def value_function(
         self, action, state, future_state, reward, discount_rate, policy_value
     ):
-        """I am a function. That's all I know."""
+        """I am a function. That's all I know.
+
+        Parameters
+        ----------
+        action : int
+            Action to take.
+        state : int
+            Current state.
+        future_state : int
+            State to move to.
+        reward : float
+            Reward set for the game.
+        discount_rate : float
+            Discount rate, or gamma.
+        policy_value : array-like, one-dimensional
+            Array with current values.
+
+        Returns
+        -------
+        array-like
+        """
         proba = self.get_proba(state, future_state, action, reward=reward)
         return (policy_value[future_state] * discount_rate + reward) * proba
 
@@ -151,15 +183,14 @@ class Board:
             delta = 0
             for state in self.non_terminals:
                 v = policy_value[state]
+                partial_sum = 0
                 for action in ACTIONS.keys():
-                    partial_sum = [
-                        self.policy[state][ACTIONS[action]]
-                        * self.get_action_value_function(
-                            action, state, reward, discount_rate, policy_value
-                        )
-                        for action in ACTIONS.keys()
-                    ]
-                policy_value[state] = sum(partial_sum)
+                    partial_sum += self.policy[state][
+                        ACTIONS[action]
+                    ] * self.get_action_value_function(
+                        action, state, reward, discount_rate, policy_value
+                    )
+                policy_value[state] = partial_sum
 
                 delta = max(delta, abs(v - policy_value[state]))
         return policy_value
@@ -189,8 +220,8 @@ class Board:
                 if not (old_action == self.policy[state]).all():
                     policy_stable = False
 
-            print(f"Reward hasta ahora: {rv}")
-            print(f"Politica hoy: \n{self.policy}")
+            # print(f"Reward hasta ahora: {rv}")
+            # print(f"Politica hoy: \n{self.policy}")
             if policy_stable:
                 return rv, self.policy
             else:
@@ -200,7 +231,20 @@ class Board:
         nx.draw(self.graph, with_labels=True)
 
 
+@click.command()
+@click.option("--length", "-l", required=True, default=4, help="Board length.")
+@click.option("--gamma", "-g", required=False, default=0.9, help="Discount rate.")
+@click.option("--theta", "-t", required=False, default=0.1, help="Tolerance.")
+@click.option(
+    "--policy", "-p", required=False, default='random', help="Initial policy."
+)
+def main(length, gamma, theta, policy):
+    juego_1 = Board(length, policy)
+    # aver = juego_1.evaluate_policy(gamma, -1, theta)
+    # print(aver.reshape(length, length))
+    reward1, policy1 = juego_1.iterate_policy(0.9, -1, 0.1)
+    print(policy1)
+
+
 if __name__ == "__main__":
-    juego_1 = Board(4)
-    aver = juego_1.evaluate_policy(0, -1, 0.1)
-    reward1, policy1 = juego_1.iterate_policy(0, -1, 0.1)
+    main()  # pylint:disable=E1120
