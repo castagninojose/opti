@@ -238,7 +238,7 @@ class Board:
 @click.option(
     "--policy", "-p", required=False, default='random', help="Initial policy."
 )
-def main(length, gamma, theta, policy):
+def main(length, gamma, theta, reward, policy):
     juego_1 = Board(length, policy)
     # aver = juego_1.evaluate_policy(gamma, -1, theta)
     # print(aver.reshape(length, length))
