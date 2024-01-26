@@ -1,6 +1,9 @@
+from typing import Tuple
+
 import click
-import networkx as nx
 import numpy as np
+from networkx import Graph, draw, grid_2d_graph, relabel_nodes
+from numpy.typing import ArrayLike, NDArray
 
 from src.reinforcement_lenin.constants import (
     ACTIONS,
@@ -15,6 +18,13 @@ class Board:
 
     Attributes
     ----------
+    board_length : int
+        Length of the board (i.e.) N.
+    board_size : int
+        Total size of the board (i.e.) N².
+    non_terminals : list
+        List of states that are not terminal.
+
     board: dict
         Dictionary representation for the legal actions in the game. Keys are states and
         values are the legal actions in such state in all directions also represented as
@@ -29,21 +39,23 @@ class Board:
                 .
                 .
             }
-    # TODO: documentar mejor esta parte, los nodos terminales les falta info
-    policy: dict
-        Similar to `board`, the policy is represented as a dict and this time the values
-        represent probabilities instead of legal moves.
-            {
-                1: {'left': 0.25, 'up': 0.25, 'right': 0.25, 'down': 0.25},
-                2: {'left': 0.25, 'up': 0.25, 'right': 0.25, 'down': 0.25},
+    policy: np.array
+        Numpy array of size (`N`**2, 4) representing the probabilities for each action
+        for each of the states. The first coordinate is the state and the second is the
+        proba for the action, according with ACTIONS@constants.py.
+            [
+                [0.5, 0.5, 0, 0],
+                [0.25, 0.25, 0.25, 0.25],
                 .
                 .
                 .
-            }
-    graph: nx.DiGraph
-        Graph representation, useful to visualize, simulate and navigate the board.
-    non_terminals : list
-        List of states that are not terminal (e.g. 0 or N² - 1).
+                [0.25, 0.25, 0.25, 0.25],
+                [0, 0, 0.5, 0.5],
+            ]
+
+    Methods
+    -------
+    TO DO !
 
     """
 
@@ -55,6 +67,7 @@ class Board:
             Number of rows and columns for the board. Total nodes: N².
 
         """
+        self.board_length = N
         self.board_size = N**2
 
         if policy == 'random':
@@ -63,6 +76,10 @@ class Board:
             self.policy[self.board_size - 1][:] = np.array([0, 0, 0.5, 0.5])
         elif policy == 'optimal':
             self.policy = OPTIMAL_POLICY
+        else:
+            raise ValueError(
+                f"Select a valid policy. Expected 'optmial' or 'random', instead got {policy}."
+            )
 
         self.board: dict = {0: dict()}
         for k in range(1, self.board_size - 1):
@@ -79,19 +96,44 @@ class Board:
 
         self.non_terminals = list(self.board.keys())[1:-1]
 
-        self.graph = nx.DiGraph()
-        for k, n in self.board.items():
-            for direction in n.values():
-                self.graph.add_edge(k, direction)
+    @property
+    def graph(self) -> Graph:
+        """Get network representation of the board according to the policy adpoted (i.e)
+        the current state of `self.policy`. Takes no arguments.
 
-        # for k, n in self.board.items():
-        #     for direction in n.values():
-        #         self.graph.add_edge(k, n[direction])
-        #         self.graph.edges[k, n[direction]]["weight"] = self.policy[k][direction]
+        Returns
+        -------
+        networkx.Graph
+            Graph representation constructed with nx.grid_2d_graph. Weights on the edge
+            (u, v) represent the probability of moving from u to v.
+
+        """
+        rv = grid_2d_graph(self.board_length, self.board_length)
+        rv = relabel_nodes(rv, {e: i + 1 for i, e in enumerate(rv.nodes)})
+        for start, end in list(rv.edges):
+            rv[start][end]["weight"] = self.policy[start][end % self.board_length]
+        return rv
+
+    @property
+    def board_as_np(self) -> NDArray:
+        """Get the board as numpy matrix. Useful to print. Takes no arguments.
+
+        Returns
+        -------
+        np.array
+            Matrix representation of the game board.
+
+        """
+        nodes = np.array(self.graph.nodes)
+        return np.reshape(nodes, (self.board_length, self.board_length))
 
     def get_proba(
-        self, state, future_state, action, reward=-1
-    ):  # pylint: disable=unused-argument
+        self,
+        state: int,
+        future_state: int,
+        action: str,
+        reward: float = -1,  # pylint: disable=unused-argument
+    ) -> float:
         """
         Compute the conditional probability of getting `reward` in `future_state` coming
         from `state` and performing `action`.
@@ -110,7 +152,7 @@ class Board:
         Returns
         -------
         float
-            Either 1 or 0 for now =p
+            1 if taking `action` in `state` takes you to `future_state` and 0 otherwise.
 
         """
         if self.board[state][action] == future_state:
@@ -118,21 +160,15 @@ class Board:
         else:
             return 0
 
-    def as_numpy(self):
-        """Represent the board in numpy format. Takes no arguments.
-
-        Returns
-        -------
-        np.array
-            Matrix representation of the game board.
-
-        """
-        nodes = np.array(self.graph.nodes)
-        return np.reshape(nodes, (self.board_size, self.board_size))
-
     def value_function(
-        self, action, state, future_state, reward, discount_rate, policy_value
-    ):
+        self,
+        action: str,
+        state: int,
+        future_state: int,
+        reward: float,
+        discount_rate: float,
+        policy_value: ArrayLike,
+    ) -> ArrayLike:
         """I am a function. That's all I know.
 
         Parameters
@@ -153,13 +189,20 @@ class Board:
         Returns
         -------
         array-like
+        ??????????
+
         """
         proba = self.get_proba(state, future_state, action, reward=reward)
         return (policy_value[future_state] * discount_rate + reward) * proba
 
     def get_action_value_function(
-        self, action, state, reward, discount_rate, policy_value
-    ):
+        self,
+        action: str,
+        state: int,
+        reward: float,
+        discount_rate: float,
+        policy_value: ArrayLike,
+    ) -> float:
         """Compute the expected return coming from `state`, taking `action` and
         following the current policy (`self.policy`)
 
@@ -172,9 +215,25 @@ class Board:
 
         return rv
 
-    def evaluate_policy(self, discount_rate: float, reward: float, tolerance: float):
+    def evaluate_policy(
+        self, discount_rate: float, reward: float, tolerance: float
+    ) -> ArrayLike:
         """The expected return when starting from each `state` and following
-        `self.policy` from then on.
+        `self.policy` from then on. Based on BurtonSutton, section 4.1 (p.75).
+
+        Parameters
+        ----------
+        discount_rate : float
+            Discount rate, or gamma.
+        reward : float
+            Reward set for the game.
+        tolerance : float
+            tolerance set for the game.
+
+        Returns
+        -------
+        policy_value : numpy.ArrayLike
+            ??????????????????????????
 
         """
         policy_value = np.zeros(len(self.board))
@@ -195,7 +254,31 @@ class Board:
                 delta = max(delta, abs(v - policy_value[state]))
         return policy_value
 
-    def iterate_policy(self, discount_rate: float, reward: float, tolerance: float):
+    def iterate_policy(
+        self, discount_rate: float, reward: float, tolerance: float
+    ) -> Tuple[ArrayLike, NDArray]:
+        """
+        Iterate policy in search of that minimizes loss. Note that this will permanently
+        modify `self.policy` attribute of the instance. Implemented following
+        BurtonSutton, section 4.3 (p.80).
+
+        Parameters
+        ----------
+        discount_rate : float
+            Discount rate, or gamma.
+        reward : float
+            Reward set for the game.
+        tolerance : float
+            tolerance set for the game.
+
+        Returns
+        -------
+        rv : numpy.ArrayLike
+            ????????????????
+        self.policy : numpy.NDArray
+            Modified policy.
+
+        """
         while True:
             rv = self.evaluate_policy(discount_rate, reward, tolerance)
             policy_stable = True
@@ -227,20 +310,28 @@ class Board:
             else:
                 continue
 
-    def plot_graph(self):
-        nx.draw(self.graph, with_labels=True)
+    def plot_graph(self) -> None:
+        """Display the board's graph using Networkx's default plotting engine. Takes no
+        arguments and returns no value.
+
+        """
+        draw(self.graph, with_labels=True)
 
 
 @click.command()
-@click.option("--length", "-l", required=True, default=4, help="Board length.")
+@click.option("--length", "-l", required=False, default=4, help="Board length.")
 @click.option("--gamma", "-g", required=False, default=0.9, help="Discount rate.")
 @click.option("--theta", "-t", required=False, default=0.1, help="Tolerance.")
+@click.option("--reward", "-r", required=False, default=-1, help="Reward.")
 @click.option(
     "--policy", "-p", required=False, default='random', help="Initial policy."
 )
 def main(length, gamma, theta, reward, policy):
+    print(f"Lado del tabero {length}")
+    print(f"Gamma (discount_rate) {gamma}")
+    print(f"Theta (Tolerance) {theta}")
+    print(f"Politica inicial {policy}")
     juego_1 = Board(length, policy)
-    # aver = juego_1.evaluate_policy(gamma, -1, theta)
     _, policy1 = juego_1.iterate_policy(gamma, reward, theta)
     print(policy1)
 
