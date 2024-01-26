@@ -39,7 +39,7 @@ class Board:
                 .
                 .
             }
-    policy: np.array
+    policy: numpy.NDArray
         Numpy array of size (`N`**2, 4) representing the probabilities for each action
         for each of the states. The first coordinate is the state and the second is the
         proba for the action, according with ACTIONS@constants.py.
@@ -59,7 +59,14 @@ class Board:
 
     """
 
-    def __init__(self, N: int = 4, policy: str = 'random'):
+    def __init__(
+        self,
+        N: int = 4,
+        reward: float = -1,
+        discount_rate: float = 0.9,
+        tolerance: float = 0.1,
+        policy: str = 'random',
+    ):
         """
         Parameters
         ----------
@@ -67,8 +74,11 @@ class Board:
             Number of rows and columns for the board. Total nodes: N².
 
         """
+        self.reward = reward
+        self.discount_rate = discount_rate
+        self.tol = tolerance
         self.board_length = N
-        self.board_size = N**2
+        self.board_size = self.board_length**2
 
         if policy == 'random':
             self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
@@ -132,7 +142,6 @@ class Board:
         state: int,
         future_state: int,
         action: str,
-        reward: float = -1,  # pylint: disable=unused-argument
     ) -> float:
         """
         Compute the conditional probability of getting `reward` in `future_state` coming
@@ -146,8 +155,6 @@ class Board:
             Future state. Between 1 and N² - 2.
         action: str
             One of 'left', 'up', 'right' or 'down' (see ACTIONS@constants.py).
-        reward: float
-            Expected reward given after `action` in `state`.
 
         Returns
         -------
@@ -165,11 +172,9 @@ class Board:
         action: str,
         state: int,
         future_state: int,
-        reward: float,
-        discount_rate: float,
         policy_value: ArrayLike,
     ) -> ArrayLike:
-        """I am a function. That's all I know.
+        """I am a function.
 
         Parameters
         ----------
@@ -179,10 +184,6 @@ class Board:
             Current state.
         future_state : int
             State to move to.
-        reward : float
-            Reward set for the game.
-        discount_rate : float
-            Discount rate, or gamma.
         policy_value : array-like, one-dimensional
             Array with current values.
 
@@ -192,15 +193,13 @@ class Board:
         ??????????
 
         """
-        proba = self.get_proba(state, future_state, action, reward=reward)
-        return (policy_value[future_state] * discount_rate + reward) * proba
+        proba = self.get_proba(state, future_state, action)
+        return (policy_value[future_state] * self.discount_rate + self.reward) * proba
 
     def get_action_value_function(
         self,
         action: str,
         state: int,
-        reward: float,
-        discount_rate: float,
         policy_value: ArrayLike,
     ) -> float:
         """Compute the expected return coming from `state`, taking `action` and
@@ -209,26 +208,15 @@ class Board:
         """
         rv = 0
         for future_state in self.board.keys():
-            rv += self.value_function(
-                action, state, future_state, reward, discount_rate, policy_value
-            )
+            rv += self.value_function(action, state, future_state, policy_value)
 
         return rv
 
-    def evaluate_policy(
-        self, discount_rate: float, reward: float, tolerance: float
-    ) -> ArrayLike:
-        """The expected return when starting from each `state` and following
-        `self.policy` from then on. Based on BurtonSutton, section 4.1 (p.75).
+    def evaluate_policy(self) -> ArrayLike:
+        """The expected return when starting from each state and following `self.policy`
+        from then on. Based on Burton-Sutton, section 4.1 (p.75).
 
-        Parameters
-        ----------
-        discount_rate : float
-            Discount rate, or gamma.
-        reward : float
-            Reward set for the game.
-        tolerance : float
-            tolerance set for the game.
+        Takes no arguments.
 
         Returns
         -------
@@ -238,7 +226,7 @@ class Board:
         """
         policy_value = np.zeros(len(self.board))
         delta = 1
-        while delta > tolerance:
+        while delta > self.tol:
             delta = 0
             for state in self.non_terminals:
                 v = policy_value[state]
@@ -246,30 +234,19 @@ class Board:
                 for action in ACTIONS.keys():
                     partial_sum += self.policy[state][
                         ACTIONS[action]
-                    ] * self.get_action_value_function(
-                        action, state, reward, discount_rate, policy_value
-                    )
+                    ] * self.get_action_value_function(action, state, policy_value)
                 policy_value[state] = partial_sum
 
                 delta = max(delta, abs(v - policy_value[state]))
         return policy_value
 
-    def iterate_policy(
-        self, discount_rate: float, reward: float, tolerance: float
-    ) -> Tuple[ArrayLike, NDArray]:
+    def iterate_policy(self) -> Tuple[ArrayLike, NDArray]:
         """
         Iterate policy in search of that minimizes loss. Note that this will permanently
         modify `self.policy` attribute of the instance. Implemented following
-        BurtonSutton, section 4.3 (p.80).
+        Burton-Sutton, section 4.3 (p.80).
 
-        Parameters
-        ----------
-        discount_rate : float
-            Discount rate, or gamma.
-        reward : float
-            Reward set for the game.
-        tolerance : float
-            tolerance set for the game.
+        Takes no arguments.
 
         Returns
         -------
@@ -280,14 +257,12 @@ class Board:
 
         """
         while True:
-            rv = self.evaluate_policy(discount_rate, reward, tolerance)
+            rv = self.evaluate_policy()
             policy_stable = True
             for state in self.non_terminals:
                 old_action = self.policy[state].copy()
                 q_actn_state = {
-                    act: self.get_action_value_function(
-                        act, state, reward, discount_rate, rv
-                    )
+                    act: self.get_action_value_function(act, state, rv)
                     for act in ACTIONS.keys()
                 }
                 max_acts = [
@@ -311,14 +286,14 @@ class Board:
                 continue
 
     def plot_graph(self) -> None:
-        """Display the board's graph using Networkx's default plotting engine. Takes no
+        """
+        Display the board using Networkx's default plotting engine. Takes no
         arguments and returns no value.
-
         """
         draw(self.graph, with_labels=True)
 
 
-@click.command()
+@click.command(context_settings={'show_default': True})
 @click.option("--length", "-l", required=False, default=4, help="Board length.")
 @click.option("--gamma", "-g", required=False, default=0.9, help="Discount rate.")
 @click.option("--theta", "-t", required=False, default=0.1, help="Tolerance.")
@@ -331,8 +306,10 @@ def main(length, gamma, theta, reward, policy):
     print(f"Gamma (discount_rate) {gamma}")
     print(f"Theta (Tolerance) {theta}")
     print(f"Politica inicial {policy}")
-    juego_1 = Board(length, policy)
-    _, policy1 = juego_1.iterate_policy(gamma, reward, theta)
+    juego_1 = Board(
+        N=length, policy=policy, tolerance=theta, discount_rate=gamma, reward=reward
+    )
+    _, policy1 = juego_1.iterate_policy()
     print(policy1)
 
 
