@@ -1,8 +1,15 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 import click
 import numpy as np
-from networkx import Graph, draw, grid_2d_graph, relabel_nodes
+from networkx import (  # shortest_path,
+    Graph,
+    draw_networkx_edges,
+    draw_networkx_labels,
+    draw_networkx_nodes,
+    grid_2d_graph,
+    relabel_nodes,
+)
 from numpy.typing import ArrayLike, NDArray
 
 from src.reinforcement_lenin.constants import (
@@ -19,9 +26,9 @@ class Board:
     Attributes
     ----------
     board_length : int
-        Length of the board (i.e.) N.
+        Length of the board (i.e.) `N`.
     board_size : int
-        Total size of the board (i.e.) N².
+        Total size of the board (i.e.) `N`².
     non_terminals : list
         List of states that are not terminal.
 
@@ -40,9 +47,9 @@ class Board:
                 .
             }
     policy: numpy.NDArray
-        Numpy array of size (`N`**2, 4) representing the probabilities for each action
+        Numpy array of size (`N`², 4) representing the probabilities for each action
         for each of the states. The first coordinate is the state and the second is the
-        proba for the action, according with ACTIONS@constants.py.
+        proba for the action, indexed according to ACTIONS@constants.py.
             [
                 [0.5, 0.5, 0, 0],
                 [0.25, 0.25, 0.25, 0.25],
@@ -52,10 +59,10 @@ class Board:
                 [0.25, 0.25, 0.25, 0.25],
                 [0, 0, 0.5, 0.5],
             ]
-
-    Methods
-    -------
-    TO DO !
+    graph : networkx.Graph
+        Graph representation of the current state of `self.policy`.
+    board_as_np : numpy.NDArray
+        Board represented as numpy array of size (`N`², `N`).
 
     """
 
@@ -65,13 +72,25 @@ class Board:
         reward: float = -1,
         discount_rate: float = 0.9,
         tolerance: float = 0.1,
-        policy: str = 'random',
-    ):
+        default_policy: str = 'random',
+    ) -> None:
         """
         Parameters
         ----------
         N : int, default=4.
-            Number of rows and columns for the board. Total nodes: N².
+            Number of rows (and columns) for the board. Total states: `N`². Boards with
+            two or less rows are considered trivial and ValueError will be raised if
+            input is less than 3.
+        reward : float, default=-1
+            Reward set for the game;
+        discount_rate : float, default=0.9
+            Discount rate set for the agent, referred to as gamma in Burton-Sutton. It
+            must be at least 0 and at most 1.
+        tolerance : float, default=0.01
+            Tolerance. Any improvement beyond this limit will result in a stall in the
+            policy iteration.
+        policy : str, default='random'
+            Default policy to adopt. If 'random'
 
         """
         self.reward = reward
@@ -80,16 +99,18 @@ class Board:
         self.board_length = N
         self.board_size = self.board_length**2
 
-        if policy == 'random':
+        if N < 3:
+            raise ValueError("Board must be at least length `N` = 3.")
+
+        if default_policy not in ['optimal', 'random']:
+            raise ValueError(f"Invalid default policy {default_policy}.")
+
+        if default_policy == 'random':
             self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
             self.policy[0][:] = np.array([0.5, 0.5, 0, 0])
             self.policy[self.board_size - 1][:] = np.array([0, 0, 0.5, 0.5])
-        elif policy == 'optimal':
+        if default_policy == 'optimal':
             self.policy = OPTIMAL_POLICY
-        else:
-            raise ValueError(
-                f"Select a valid policy. Expected 'optmial' or 'random', instead got {policy}."
-            )
 
         self.board: dict = {0: dict()}
         for k in range(1, self.board_size - 1):
@@ -107,6 +128,19 @@ class Board:
         self.non_terminals = list(self.board.keys())[1:-1]
 
     @property
+    def board_as_np(self) -> NDArray:
+        """Get the board as numpy matrix. Useful to print. Takes no arguments.
+
+        Returns
+        -------
+        np.array
+            Matrix representation of the game board of size (`N`, `N`).
+
+        """
+        nodes = np.array(self.graph.nodes)
+        return np.reshape(nodes, (self.board_length, self.board_length))
+
+    @property
     def graph(self) -> Graph:
         """Get network representation of the board according to the policy adpoted (i.e)
         the current state of `self.policy`. Takes no arguments.
@@ -119,23 +153,18 @@ class Board:
 
         """
         rv = grid_2d_graph(self.board_length, self.board_length)
-        rv = relabel_nodes(rv, {e: i + 1 for i, e in enumerate(rv.nodes)})
-        for start, end in list(rv.edges):
-            rv[start][end]["weight"] = self.policy[start][end % self.board_length]
+        rv = relabel_nodes(rv, {node: ix for ix, node in enumerate(rv.nodes)})
+        rv = rv.to_directed()
+        rv[0][1]["weight"] = 0
+        rv[0][4]["weight"] = 0
+        rv[self.board_size - 1][11]["weight"] = 0
+        rv[self.board_size - 1][14]["weight"] = 0
+        for start in self.non_terminals:
+            for end in rv.neighbors(start):
+                # end_row = end // self.board_length
+                # end_col = end % self.board_length
+                rv[start][end]["weight"] = 0.25
         return rv
-
-    @property
-    def board_as_np(self) -> NDArray:
-        """Get the board as numpy matrix. Useful to print. Takes no arguments.
-
-        Returns
-        -------
-        np.array
-            Matrix representation of the game board.
-
-        """
-        nodes = np.array(self.graph.nodes)
-        return np.reshape(nodes, (self.board_length, self.board_length))
 
     def get_proba(
         self,
@@ -150,9 +179,9 @@ class Board:
         Parameters
         ----------
         state: int
-            Current state. Between 1 and N² - 2.
+            Current state. Between 1 and `N`² - 2.
         future_state: int
-            Future state. Between 1 and N² - 2.
+            Future state. Between 1 and `N`² - 2.
         action: str
             One of 'left', 'up', 'right' or 'down' (see ACTIONS@constants.py).
 
@@ -231,27 +260,31 @@ class Board:
             for state in self.non_terminals:
                 v = policy_value[state]
                 partial_sum = 0
-                for action in ACTIONS.keys():
+                for action, action_ix in ACTIONS.items():
                     partial_sum += self.policy[state][
-                        ACTIONS[action]
+                        action_ix
                     ] * self.get_action_value_function(action, state, policy_value)
-                policy_value[state] = partial_sum
 
+                policy_value[state] = partial_sum
                 delta = max(delta, abs(v - policy_value[state]))
+
         return policy_value
 
     def iterate_policy(self) -> Tuple[ArrayLike, NDArray]:
         """
-        Iterate policy in search of that minimizes loss. Note that this will permanently
-        modify `self.policy` attribute of the instance. Implemented following
-        Burton-Sutton, section 4.3 (p.80).
+        Iterate policy to minimize loss.
+
+        Note: this will modify the policy attribute (`self.policy`)of the instance. Its
+        array will be modified in each iteration until the improvement between states is
+        bellow `self.tolerance`. Implemented following Burton-Sutton, section 4.3 (p.80).
 
         Takes no arguments.
 
         Returns
         -------
         rv : numpy.ArrayLike
-            ????????????????
+            Policy adopted by an agent trained following the mentioned algorithm. See
+            `self.policy` for details on the policy implementation.
         self.policy : numpy.NDArray
             Modified policy.
 
@@ -270,27 +303,49 @@ class Board:
                     for k, v in q_actn_state.items()
                     if v == max(q_actn_state.values())
                 ]
-                for action in ACTIONS.keys():
+                for action, action_ix in ACTIONS.items():
                     if action in max_acts:
-                        self.policy[state][ACTIONS[action]] = 1 / len(max_acts)
+                        self.policy[state][action_ix] = 1 / len(max_acts)
                     else:
-                        self.policy[state][ACTIONS[action]] = 0
+                        self.policy[state][action_ix] = 0
                 if not (old_action == self.policy[state]).all():
                     policy_stable = False
 
-            # print(f"Reward hasta ahora: {rv}")
-            # print(f"Politica hoy: \n{self.policy}")
             if policy_stable:
                 return rv, self.policy
             else:
                 continue
 
-    def plot_graph(self) -> None:
+    def plot_graph(self, highlight_state: Union[int, bool] = False) -> None:
         """
-        Display the board using Networkx's default plotting engine. Takes no
-        arguments and returns no value.
+        Display the board using Networkx's default plotting engine.
+
+        Parameters
+        ----------
+        highlight_state : int, default=False
+            State to highlight. Only if defined explicitly. Must be between 0 and `N`².
+
+        Returns no value.
+
         """
-        draw(self.graph, with_labels=True)
+        G = self.graph
+        colors = ['mediumslateblue'] * len(G)
+        if highlight_state:
+            colors[highlight_state] = 'yellow'
+
+        length = self.board_length
+        pos = {node: ((node % length), length - (node // length)) for node in G.nodes}
+        draw_networkx_nodes(G, pos, node_color=colors, node_shape='d', node_size=499)
+        draw_networkx_labels(G, pos)
+        draw_networkx_edges(
+            G,
+            pos,
+            # TODO jan 28, 2024: set weights to self.graph so edges can have width
+            # width=[G[s][e]["weight"] for s, e in G.edges],
+            # width=[w for w in np.random.uniform(size=36)],
+            edgelist=[(s, e) for s, e in G.edges if G[s][e]["weight"] > 0],
+            connectionstyle=f"arc3, rad = {0.2}",
+        )
 
 
 @click.command(context_settings={'show_default': True})
@@ -307,8 +362,13 @@ def main(length, gamma, theta, reward, policy):
     print(f"Theta (Tolerance) {theta}")
     print(f"Politica inicial {policy}")
     juego_1 = Board(
-        N=length, policy=policy, tolerance=theta, discount_rate=gamma, reward=reward
+        N=length,
+        default_policy=policy,
+        tolerance=theta,
+        discount_rate=gamma,
+        reward=reward,
     )
+    print(juego_1.policy)
     _, policy1 = juego_1.iterate_policy()
     print(policy1)
 
