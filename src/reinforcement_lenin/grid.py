@@ -359,20 +359,29 @@ class Board:
         Returns no value.
 
         """
+        # define graph and positions for the nodes in the figure
         G = self.graph.copy()
-        colors = ['mediumslateblue'] * len(G)
+        length = self.board_length
+        pos = {node: ((node % length), length - (node // length)) for node in G.nodes}
+
+        # set terminal nodes color to red and highlight current state if specified.
+        colors = ['mediumslateblue'] * self.board_size
+        colors[0] = 'black'
+        colors[self.board_size - 1] = 'black'
         if highlight_state:
             colors[highlight_state] = 'yellow'
 
-        length = self.board_length
-        pos = {node: ((node % length), length - (node // length)) for node in G.nodes}
+        # set edges properties
+        edges_to_draw = [(s, e) for s, e in G.edges if G[s][e]["weight"] > 0]
+        edges_weights = [G[s][e]["weight"] * 2 for s, e in edges_to_draw]
+
         draw_networkx_nodes(G, pos, node_color=colors, node_shape='d', node_size=499)
         draw_networkx_labels(G, pos)
         draw_networkx_edges(
             G,
             pos,
-            width=[G[s][e]["weight"] * 2 for s, e in G.edges if G[s][e]["weight"] > 0],
-            edgelist=[(s, e) for s, e in G.edges if G[s][e]["weight"] > 0],
+            width=edges_weights,
+            edgelist=edges_to_draw,
             connectionstyle=f"arc3, rad = {0.2}",
         )
 
