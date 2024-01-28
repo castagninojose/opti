@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import click
 import numpy as np
@@ -94,11 +94,11 @@ class Board:
             Default policy to adopt. If 'random'
 
         """
-        self.reward = reward
-        self.discount_rate = discount_rate
-        self.tol = tolerance
-        self.board_length = N
-        self.board_size = self.board_length**2
+        self.reward: float = reward
+        self.discount_rate: float = discount_rate
+        self.tol: float = tolerance
+        self.board_length: int = N
+        self.board_size: int = self.board_length**2
 
         if N < 3:
             raise ValueError("Board must be at least length `N` = 3.")
@@ -365,23 +365,23 @@ class Board:
         pos = {node: ((node % length), length - (node // length)) for node in G.nodes}
 
         # set terminal nodes color to red and highlight current state if specified.
-        colors = ['mediumslateblue'] * self.board_size
+        colors: List[str] = ['mediumslateblue'] * self.board_size
         colors[0] = 'black'
         colors[self.board_size - 1] = 'black'
         if highlight_state:
             colors[highlight_state] = 'yellow'
 
         # set edges properties
-        edges_to_draw = [(s, e) for s, e in G.edges if G[s][e]["weight"] > 0]
-        edges_weights = [G[s][e]["weight"] * 2 for s, e in edges_to_draw]
+        edges: List[Tuple] = [(s, e) for s, e in G.edges if G[s][e]["weight"] > 0]
+        weights: List[float] = [G[s][e]["weight"] * 2 for s, e in edges]
 
         draw_networkx_nodes(G, pos, node_color=colors, node_shape='d', node_size=499)
         draw_networkx_labels(G, pos)
         draw_networkx_edges(
             G,
             pos,
-            width=edges_weights,
-            edgelist=edges_to_draw,
+            width=weights,
+            edgelist=edges,
             connectionstyle=f"arc3, rad = {0.2}",
         )
 
