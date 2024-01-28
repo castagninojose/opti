@@ -11,6 +11,7 @@ from networkx import (  # shortest_path,
     relabel_nodes,
 )
 from numpy.typing import ArrayLike, NDArray
+from pyvis import network as pyvisnet
 
 from src.reinforcement_lenin.constants import (
     ACTIONS,
@@ -137,13 +138,18 @@ class Board:
             Matrix representation of the game board of size (`N`, `N`).
 
         """
-        nodes = np.array(self.graph.nodes)
+        nodes = np.array(self.board.keys())
         return np.reshape(nodes, (self.board_length, self.board_length))
 
     @property
     def graph(self) -> Graph:
         """Get network representation of the board according to the policy adpoted (i.e)
-        the current state of `self.policy`. Takes no arguments.
+        the current state of `self.policy`.
+
+        The second index (column) used to get values from `self.policy` is retrieved using
+        inverse lookup on `self.board[state]`, which are one-to-one maps for all states.
+
+        Takes no arguments.
 
         Returns
         -------
@@ -155,15 +161,19 @@ class Board:
         rv = grid_2d_graph(self.board_length, self.board_length)
         rv = relabel_nodes(rv, {node: ix for ix, node in enumerate(rv.nodes)})
         rv = rv.to_directed()
-        rv[0][1]["weight"] = 0
-        rv[0][4]["weight"] = 0
-        rv[self.board_size - 1][11]["weight"] = 0
-        rv[self.board_size - 1][14]["weight"] = 0
+        # fill terminal nodes policy manually
+        for n in rv.neighbors(0):
+            rv[0][n]["weight"] = 0
+        for n in rv.neighbors(self.board_size - 1):
+            rv[self.board_size - 1][n]["weight"] = 0
+        # the rest is filled using `self.policy`
         for start in self.non_terminals:
             for end in rv.neighbors(start):
-                # end_row = end // self.board_length
-                # end_col = end % self.board_length
-                rv[start][end]["weight"] = 0.25
+                end_ix = int(
+                    list(self.board[start].values()).index(end)
+                )  # cast as int cuz of reasons
+                rv[start][end]["weight"] = self.policy[start][end_ix]
+
         return rv
 
     def get_proba(
@@ -231,9 +241,25 @@ class Board:
         state: int,
         policy_value: ArrayLike,
     ) -> float:
-        """Compute the expected return coming from `state`, taking `action` and
-        following the current policy (`self.policy`)
+        """Compute expected return coming from `state`, taking `action` and following
+        policy (`self.policy`).
 
+        Returns the sum of of `self.value_function(action, state future_state)`, over all
+        future_states. Used in `self.evaluate_policy` and `selfl.iterate_policy`.
+
+        Parameters
+        ----------
+        action : str,
+            Action.
+        state : int,
+            Source state.
+        policy_value : array-like
+            Current policy values.
+
+        Returns
+        -------
+        rv : float
+            The specified sum.
         """
         rv = 0
         for future_state in self.board.keys():
@@ -308,7 +334,7 @@ class Board:
                         self.policy[state][action_ix] = 1 / len(max_acts)
                     else:
                         self.policy[state][action_ix] = 0
-                if not (old_action == self.policy[state]).all():
+                if not np.allclose(old_action, self.policy[state], atol=self.tol):
                     policy_stable = False
 
             if policy_stable:
@@ -316,19 +342,24 @@ class Board:
             else:
                 continue
 
-    def plot_graph(self, highlight_state: Union[int, bool] = False) -> None:
+    def draw_policy(self, highlight_state: Union[int, bool] = False) -> None:
         """
         Display the board using Networkx's default plotting engine.
+
+        Edges have a width corresponding with the probability value of `self.policy`,
+        scaled by a factor of 2 for easier visualization. Only edges with positive
+        probability will be drawn.
 
         Parameters
         ----------
         highlight_state : int, default=False
-            State to highlight. Only if defined explicitly. Must be between 0 and `N`².
+            State to highlight. Only if defined explicitly (no state is highlighted otherwise).
+            Must be between 0 and `N`².
 
         Returns no value.
 
         """
-        G = self.graph
+        G = self.graph.copy()
         colors = ['mediumslateblue'] * len(G)
         if highlight_state:
             colors[highlight_state] = 'yellow'
@@ -340,12 +371,41 @@ class Board:
         draw_networkx_edges(
             G,
             pos,
-            # TODO jan 28, 2024: set weights to self.graph so edges can have width
-            # width=[G[s][e]["weight"] for s, e in G.edges],
-            # width=[w for w in np.random.uniform(size=36)],
+            width=[G[s][e]["weight"] * 2 for s, e in G.edges if G[s][e]["weight"] > 0],
             edgelist=[(s, e) for s, e in G.edges if G[s][e]["weight"] > 0],
             connectionstyle=f"arc3, rad = {0.2}",
         )
+
+    def interactive_board(self, filename: str = "./poneme-nombre.html"):
+        """Save board as an interactive html file built using pyvis.
+
+        Edge weights (probabilities defined by `self.policy`) are scaled by a factor of
+        10 for easier visualization. A copy of the original weights in string format is
+        seen when hovering over an edge.
+
+        Parameters
+        ----------
+        filename : str, default='./plots/poneme-nombre.html'
+            Name for the html to save.
+
+        Returns no value.
+
+        """
+        G = self.graph.copy()
+        pyvis_nt = pyvisnet.Network(
+            directed=True,
+            # notebook=True,
+            # cdn_resources='in_line'
+        )
+        for n in G.nodes:
+            pyvis_nt.add_node(n, label=f"{n + 1}", size=7)
+        for start, end in G.edges:
+            edge_weight = G.get_edge_data(start, end)["weight"]
+            pyvis_nt.add_edge(
+                start, end, title=f"{edge_weight}", width=edge_weight * 10
+            )
+        pyvis_nt.show_buttons()
+        pyvis_nt.save_graph(filename)
 
 
 @click.command(context_settings={'show_default': True})
@@ -371,6 +431,7 @@ def main(length, gamma, theta, reward, policy):
     print(juego_1.policy)
     _, policy1 = juego_1.iterate_policy()
     print(policy1)
+    juego_1.interactive_board('ejem.html')
 
 
 if __name__ == "__main__":
