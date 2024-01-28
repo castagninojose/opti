@@ -30,7 +30,9 @@ class Board:
         Length of the board (i.e.) `N`.
     board_size : int
         Total size of the board (i.e.) `N`².
-    non_terminals : list
+    terminals : list of int, default=[0, `N`² - 1]
+        Terminal states.
+    non_terminals : list of int, default=[1 : `N`² - 2]
         List of states that are not terminal.
 
     board: dict
@@ -100,8 +102,26 @@ class Board:
         self.board_length: int = N
         self.board_size: int = self.board_length**2
 
+        self._states: List[int] = list(range(self.board_size - 1))
+        self.terminals: List[int] = [0, self.board_size - 1]
+        self.non_terminals: List[int] = list(set(self._states) - set(self.terminals))
+
         if N < 3:
             raise ValueError("Board must be at least length `N` = 3.")
+
+        self.board: dict = {}
+        for n in self.terminals:
+            self.board[n] = dict()
+        for n in self.non_terminals:
+            self.board[n] = {'left': n - 1, 'up': n - N, 'right': n + 1, 'down': n + N}
+            if n - N < 0:
+                self.board[n]['up'] = n
+            if n + N >= self.board_size:
+                self.board[n]['down'] = n
+            if n % N == 0:
+                self.board[n]['left'] = n
+            if n % N == N - 1:
+                self.board[n]['right'] = n
 
         if default_policy not in ['optimal', 'random']:
             raise ValueError(f"Invalid default policy {default_policy}.")
@@ -112,21 +132,6 @@ class Board:
             self.policy[self.board_size - 1][:] = np.array([0, 0, 0.5, 0.5])
         if default_policy == 'optimal':
             self.policy = OPTIMAL_POLICY
-
-        self.board: dict = {0: dict()}
-        for k in range(1, self.board_size - 1):
-            self.board[k] = {'left': k - 1, 'up': k - N, 'right': k + 1, 'down': k + N}
-            if k - N < 0:
-                self.board[k]['up'] = k
-            if k + N >= self.board_size:
-                self.board[k]['down'] = k
-            if k % N == 0:
-                self.board[k]['left'] = k
-            if k % N == N - 1:
-                self.board[k]['right'] = k
-        self.board[self.board_size - 1] = dict()
-
-        self.non_terminals = list(self.board.keys())[1:-1]
 
     @property
     def board_as_np(self) -> NDArray:
@@ -346,6 +351,7 @@ class Board:
         """
         Display the board using Networkx's default plotting engine.
 
+        Nodes are labeled 1 through `N` and terminal nodes will be colored differently.
         Edges have a width corresponding with the probability value of `self.policy`,
         scaled by a factor of 2 for easier visualization. Only edges with positive
         probability will be drawn.
@@ -353,7 +359,7 @@ class Board:
         Parameters
         ----------
         highlight_state : int, default=False
-            State to highlight. Only if defined explicitly (no state is highlighted otherwise).
+            State. Only if defined explicitly (only terminal are highlighted otherwise).
             Must be between 0 and `N`².
 
         Returns no value.
@@ -364,55 +370,64 @@ class Board:
         length = self.board_length
         pos = {node: ((node % length), length - (node // length)) for node in G.nodes}
 
-        # set terminal nodes color to red and highlight current state if specified.
-        colors: List[str] = ['mediumslateblue'] * self.board_size
-        colors[0] = 'black'
-        colors[self.board_size - 1] = 'black'
+        # set node's properties and init the figure with them
+        labels: dict = {n: n + 1 for n in G.nodes}
+        colors: List[str] = ['mediumslateblue'] * self.board_size  # default node colors
+        for n in self.terminals:
+            colors[n] = 'black'
         if highlight_state:
-            colors[highlight_state] = 'yellow'
+            colors[highlight_state - 1] = 'yellow'
 
-        # set edges properties
+        draw_networkx_nodes(G, pos, node_color=colors, node_shape='d', node_size=499)
+        draw_networkx_labels(G, pos, labels=labels)
+
+        # set edges' properties and add to figure
         edges: List[Tuple] = [(s, e) for s, e in G.edges if G[s][e]["weight"] > 0]
         weights: List[float] = [G[s][e]["weight"] * 2 for s, e in edges]
 
-        draw_networkx_nodes(G, pos, node_color=colors, node_shape='d', node_size=499)
-        draw_networkx_labels(G, pos)
         draw_networkx_edges(
-            G,
-            pos,
-            width=weights,
-            edgelist=edges,
-            connectionstyle=f"arc3, rad = {0.2}",
+            G, pos, width=weights, edgelist=edges, connectionstyle=f"arc3, rad = {0.19}"
         )
 
-    def interactive_board(self, filename: str = "./poneme-nombre.html"):
+    def interactive_board(
+        self,
+        filename: str = "./poneme-nombre.html",
+        node_scale_factor: int = 10,
+    ):
         """Save board as an interactive html file built using pyvis.
 
-        Edge weights (probabilities defined by `self.policy`) are scaled by a factor of
-        10 for easier visualization. A copy of the original weights in string format is
-        seen when hovering over an edge.
+        Edge weights (probabilities in `self.policy`) are scaled by `scale factor` for
+        easier visualization. A copy of the original weights in string format is seen
+        when hovering over an edge.
 
         Parameters
         ----------
         filename : str, default='./plots/poneme-nombre.html'
             Name for the html to save.
+        node_scale_factor : int, default=10
+            Scaling factor. Must be a positive integer.
 
         Returns no value.
 
         """
         G = self.graph.copy()
-        pyvis_nt = pyvisnet.Network(
-            directed=True,
-            # notebook=True,
-            # cdn_resources='in_line'
-        )
-        for n in G.nodes:
-            pyvis_nt.add_node(n, label=f"{n + 1}", size=7)
-        for start, end in G.edges:
-            edge_weight = G.get_edge_data(start, end)["weight"]
-            pyvis_nt.add_edge(
-                start, end, title=f"{edge_weight}", width=edge_weight * 10
+        pyvis_nt = pyvisnet.Network(directed=True)
+        for n in self.terminals:
+            pyvis_nt.add_node(n, label=f"{n + 1}", size=13, color="black", shape='star')
+        for n in self.non_terminals:
+            pyvis_nt.add_node(
+                n, label=f"{n + 1}", size=3, color="yellow", shape='circle'
             )
+        for start, end in G.edges:
+            edge_weight = G.get_edge_data(start, end)["weight"] * node_scale_factor
+            if edge_weight > 0:
+                pyvis_nt.add_edge(
+                    start,
+                    end,
+                    title=f"{edge_weight}",
+                    width=edge_weight,
+                    color="blue",
+                )
         pyvis_nt.show_buttons()
         pyvis_nt.save_graph(filename)
 
