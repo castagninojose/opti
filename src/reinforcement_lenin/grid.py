@@ -34,6 +34,7 @@ class Board:
         Terminal states.
     non_terminals : list of int, default=[1 : `N`² - 2]
         List of states that are not terminal.
+    tol : float, default=0.01
 
     board: dict
         Dictionary representation for the legal actions in the game. Keys are states and
@@ -74,7 +75,7 @@ class Board:
         N: int = 4,
         reward: float = -1,
         discount_rate: float = 0.9,
-        tolerance: float = 0.1,
+        tolerance: float = 0.01,
         default_policy: str = 'random',
     ) -> None:
         """
@@ -96,19 +97,21 @@ class Board:
             Default policy to adopt. If 'random'
 
         """
+        if N < 3:
+            raise ValueError("Board must be at least length `N` = 3.")
+
+        # set board general properties
+        self.board_length: int = N
+        self.board_size: int = self.board_length**2
         self.reward: float = reward
         self.discount_rate: float = discount_rate
         self.tol: float = tolerance
-        self.board_length: int = N
-        self.board_size: int = self.board_length**2
 
         self._states: List[int] = list(range(self.board_size - 1))
         self.terminals: List[int] = [0, self.board_size - 1]
         self.non_terminals: List[int] = list(set(self._states) - set(self.terminals))
 
-        if N < 3:
-            raise ValueError("Board must be at least length `N` = 3.")
-
+        # set boar attribute
         self.board: dict = {}
         for n in self.terminals:
             self.board[n] = dict()
@@ -123,6 +126,7 @@ class Board:
             if n % N == N - 1:
                 self.board[n]['right'] = n
 
+        # set policy attribute
         if default_policy not in ['optimal', 'random']:
             raise ValueError(f"Invalid default policy {default_policy}.")
 
@@ -134,25 +138,12 @@ class Board:
             self.policy = OPTIMAL_POLICY
 
     @property
-    def board_as_np(self) -> NDArray:
-        """Get the board as numpy matrix. Useful to print. Takes no arguments.
-
-        Returns
-        -------
-        np.array
-            Matrix representation of the game board of size (`N`, `N`).
-
-        """
-        nodes = np.array(self.board.keys())
-        return np.reshape(nodes, (self.board_length, self.board_length))
-
-    @property
     def graph(self) -> Graph:
         """Get network representation of the board according to the policy adpoted (i.e)
         the current state of `self.policy`.
 
         The second index (column) used to get values from `self.policy` is retrieved using
-        inverse lookup on `self.board[state]`, which are one-to-one maps for all states.
+        inverse lookup on `self.board[state]`, which is a one-to-one map for all states.
 
         Takes no arguments.
 
@@ -325,18 +316,18 @@ class Board:
             policy_stable = True
             for state in self.non_terminals:
                 old_action = self.policy[state].copy()
-                q_actn_state = {
+                q_action_state = {
                     act: self.get_action_value_function(act, state, rv)
                     for act in ACTIONS.keys()
                 }
-                max_acts = [
+                max_actions = [
                     k
-                    for k, v in q_actn_state.items()
-                    if v == max(q_actn_state.values())
+                    for k, v in q_action_state.items()
+                    if v == max(q_action_state.values())  # use np.allclose() ?
                 ]
                 for action, action_ix in ACTIONS.items():
-                    if action in max_acts:
-                        self.policy[state][action_ix] = 1 / len(max_acts)
+                    if action in max_actions:
+                        self.policy[state][action_ix] = 1 / len(max_actions)
                     else:
                         self.policy[state][action_ix] = 0
                 if not np.allclose(old_action, self.policy[state], atol=self.tol):
@@ -346,6 +337,18 @@ class Board:
                 return rv, self.policy
             else:
                 continue
+
+    def board_as_np(self) -> NDArray:
+        """Get the board as numpy matrix. Useful to print. Takes no arguments.
+
+        Returns
+        -------
+        np.array
+            Matrix representation of the game board of size (`N`, `N`).
+
+        """
+        nodes = np.array(self.board.keys())
+        return np.reshape(nodes, (self.board_length, self.board_length))
 
     def draw_policy(self, highlight_state: Union[int, bool] = False) -> None:
         """
