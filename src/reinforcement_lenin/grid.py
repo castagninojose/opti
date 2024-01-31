@@ -73,7 +73,7 @@ class Board:
     def __init__(
         self,
         N: int = 4,
-        reward: float = -1,
+        reward: ArrayLike = None,
         discount_rate: float = 0.9,
         tolerance: float = 0.01,
         default_policy: str = 'random',
@@ -85,8 +85,8 @@ class Board:
             Number of rows (and columns) for the board. Total states: `N`². Boards with
             two or less rows are considered trivial and ValueError will be raised if
             input is less than 3.
-        reward : float, default=-1
-            Reward set for the game;
+        reward : array-like, default=([-1, -1, -1, -1] * self.board_size)
+            Reward set for the game.
         discount_rate : float, default=0.9
             Discount rate set for the agent, referred to as gamma in Burton-Sutton. It
             must be at least 0 and at most 1.
@@ -103,9 +103,13 @@ class Board:
         # set board general properties
         self.board_length: int = N
         self.board_size: int = self.board_length**2
-        self.reward: float = reward
         self.discount_rate: float = discount_rate
         self.tol: float = tolerance
+        if reward is None:
+            self.reward = np.array([[-1] * 4] * self.board_size)
+        else:
+            # TODO: que el usuario pueda editar valores individuales
+            self.reward = reward
 
         self._states: List[int] = list(range(self.board_size - 1))
         self.terminals: List[int] = [0, self.board_size - 1]
@@ -177,6 +181,8 @@ class Board:
         state: int,
         future_state: int,
         action: str,
+        reward: float,
+        constant_reward: bool = True,
     ) -> float:
         """
         Compute the conditional probability of getting `reward` in `future_state` coming
@@ -197,10 +203,19 @@ class Board:
             1 if taking `action` in `state` takes you to `future_state` and 0 otherwise.
 
         """
-        if self.board[state][action] == future_state:
-            return 1
+        legal_action = self.board[state][action] == future_state
+        valid_reward = self.reward[state][ACTIONS[action]] == reward
+
+        if constant_reward:
+            if legal_action:
+                return 1
+            else:
+                return 0
         else:
-            return 0
+            if legal_action and valid_reward:
+                return 1
+            else:
+                return 0
 
     def value_function(
         self,
@@ -208,6 +223,7 @@ class Board:
         state: int,
         future_state: int,
         policy_value: ArrayLike,
+        reward: float,
     ) -> ArrayLike:
         """I am a function.
 
@@ -228,8 +244,8 @@ class Board:
         ??????????
 
         """
-        proba = self.get_proba(state, future_state, action)
-        return (policy_value[future_state] * self.discount_rate + self.reward) * proba
+        proba = self.get_proba(state, future_state, action, reward)
+        return (policy_value[future_state] * self.discount_rate + reward) * proba
 
     def get_action_value_function(
         self,
@@ -259,7 +275,13 @@ class Board:
         """
         rv = 0
         for future_state in self.board.keys():
-            rv += self.value_function(action, state, future_state, policy_value)
+            rv += self.value_function(
+                action,
+                state,
+                future_state,
+                policy_value,
+                self.reward[state][ACTIONS[action]],
+            )
 
         return rv
 
@@ -427,7 +449,7 @@ class Board:
                 pyvis_nt.add_edge(
                     start,
                     end,
-                    title=f"{edge_weight}",
+                    title=f"{edge_weight / 10}",
                     width=edge_weight,
                     color="blue",
                 )
@@ -439,7 +461,7 @@ class Board:
 @click.option("--length", "-l", required=False, default=4, help="Board length.")
 @click.option("--gamma", "-g", required=False, default=0.9, help="Discount rate.")
 @click.option("--theta", "-t", required=False, default=0.1, help="Tolerance.")
-@click.option("--reward", "-r", required=False, default=-1, help="Reward.")
+@click.option("--reward", "-r", required=False, default=None, help="Reward.")
 @click.option(
     "--policy", "-p", required=False, default='random', help="Initial policy."
 )
