@@ -70,13 +70,14 @@ class Board:
 
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=dangerous-default-value
         self,
         N: int = 4,
         reward: ArrayLike = None,
         discount_rate: float = 0.9,
         tolerance: float = 0.01,
         default_policy: str = 'random',
+        terminals: List[int] = [0],
     ) -> None:
         """
         Parameters
@@ -111,9 +112,8 @@ class Board:
             # TODO: que el usuario pueda editar valores individuales
             self.reward = reward
 
-        self._states: List[int] = list(range(self.board_size - 1))
-        self.terminals: List[int] = [0, self.board_size - 1]
-        # self.terminals: List[int] = [0]
+        self._states: List[int] = list(range(self.board_size))
+        self.terminals = terminals
         self.non_terminals: List[int] = list(set(self._states) - set(self.terminals))
 
         # set boar attribute
@@ -137,8 +137,6 @@ class Board:
 
         if default_policy == 'random':
             self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
-            self.policy[0][:] = np.array([0.5, 0.5, 0, 0])
-            self.policy[self.board_size - 1][:] = np.array([0, 0, 0.5, 0.5])
         if default_policy == 'optimal':
             self.policy = OPTIMAL_POLICY
 
