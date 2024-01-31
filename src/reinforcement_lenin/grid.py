@@ -113,6 +113,7 @@ class Board:
 
         self._states: List[int] = list(range(self.board_size - 1))
         self.terminals: List[int] = [0, self.board_size - 1]
+        # self.terminals: List[int] = [0]
         self.non_terminals: List[int] = list(set(self._states) - set(self.terminals))
 
         # set boar attribute
@@ -162,10 +163,9 @@ class Board:
         rv = relabel_nodes(rv, {node: ix for ix, node in enumerate(rv.nodes)})
         rv = rv.to_directed()
         # fill terminal nodes policy manually
-        for n in rv.neighbors(0):
-            rv[0][n]["weight"] = 0
-        for n in rv.neighbors(self.board_size - 1):
-            rv[self.board_size - 1][n]["weight"] = 0
+        for t in self.terminals:
+            for n in rv.neighbors(t):
+                rv[t][n]["weight"] = 0
         # the rest is filled using `self.policy`
         for start in self.non_terminals:
             for end in rv.neighbors(start):
@@ -480,7 +480,7 @@ def main(length, gamma, theta, reward, policy):
     print(juego_1.policy)
     _, policy1 = juego_1.iterate_policy()
     print(policy1)
-    juego_1.interactive_board('ejem.html')
+    juego_1.draw_policy()
 
 
 if __name__ == "__main__":
