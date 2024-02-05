@@ -53,7 +53,7 @@ class Board:
     policy: numpy.NDArray
         Numpy array of size (`N`², 4) representing the probabilities for each action
         for each of the states. The first coordinate is the state and the second is the
-        proba for the action, indexed according to ACTIONS@constants.py.
+        proba for the action, indexed according to ACTIONS@constants.py. Default is
             [
                 [0.5, 0.5, 0, 0],
                 [0.25, 0.25, 0.25, 0.25],
@@ -62,6 +62,17 @@ class Board:
                 .
                 [0.25, 0.25, 0.25, 0.25],
                 [0, 0, 0.5, 0.5],
+            ]
+    reward : numpy.NDarray
+        Numpy array of size (`N`², 4) representing the reward for each action for each of
+        the states. The first coordinate is the state and the second is the reward indexed
+        according to ACTIONS@constants.py. Default is
+            [
+                [-1, -1, -1, -1],
+                .
+                .
+                .
+                [-1, -1, -1, -1],
             ]
     graph : networkx.Graph
         Graph representation of the current state of `self.policy`.
@@ -86,8 +97,8 @@ class Board:
             Number of rows (and columns) for the board. Total states: `N`². Boards with
             two or less rows are considered trivial and ValueError will be raised if
             input is less than 3.
-        reward : array-like, default=([-1, -1, -1, -1] * self.board_size)
-            Reward set for the game.
+        reward : array-like, default=([-1, -1, -1, -1] * `N`²)
+            Array of dimensions (`N`², 4) with the reward(s) set for the game.
         discount_rate : float, default=0.9
             Discount rate set for the agent, referred to as gamma in Burton-Sutton. It
             must be at least 0 and at most 1.
@@ -96,6 +107,8 @@ class Board:
             policy iteration.
         policy : str, default='random'
             Default policy to adopt. If 'random'
+        terminals : list of int, default=[0] (first node only)
+            List of nodes to act as terminals for the game. Must be between 0 and `N - 1`.
 
         """
         if N < 3:
