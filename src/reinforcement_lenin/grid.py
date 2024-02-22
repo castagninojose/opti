@@ -88,7 +88,7 @@ class Board:
         discount_rate: float = 0.9,
         tolerance: float = 0.01,
         default_policy: str = 'random',
-        terminals: List[int] = [0],
+        terminals: List[int] = None,
     ) -> None:
         """
         Parameters
@@ -126,7 +126,10 @@ class Board:
             self.reward = reward
 
         self._states: List[int] = list(range(self.board_size))
-        self.terminals = terminals
+        if terminals is None:
+            self.terminals = [0, self.board_size - 1]
+        else:
+            self.terminals = terminals
         self.non_terminals: List[int] = list(set(self._states) - set(self.terminals))
 
         # set boar attribute
@@ -235,7 +238,7 @@ class Board:
         future_state: int,
         policy_value: ArrayLike,
         reward: float,
-    ) -> ArrayLike:
+    ) -> float:
         """I am a function.
 
         Parameters
@@ -251,8 +254,8 @@ class Board:
 
         Returns
         -------
-        array-like
-        ??????????
+        float
+            Function value.
 
         """
         proba = self.get_proba(state, future_state, action, reward)
@@ -284,7 +287,7 @@ class Board:
         rv : float
             The specified sum.
         """
-        rv = 0
+        rv = 0.0
         for future_state in self.board.keys():
             rv += self.value_function(
                 action,
