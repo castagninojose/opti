@@ -15,8 +15,8 @@ from pyvis import network as pyvisnet
 
 from src.reinforcement_lenin.constants import (
     ACTIONS,
+    BURTON_POLICY,
     DEFAULT_STATE_POLICY,
-    OPTIMAL_POLICY,
 )
 
 
@@ -128,9 +128,12 @@ class Board:
         self._states: List[int] = list(range(self.board_size))
         if terminals is None:
             self.terminals = [0, self.board_size - 1]
+        elif isinstance(terminals, int):
+            self.terminals = [terminals]
         else:
             self.terminals = terminals
-        self.non_terminals: List[int] = list(set(self._states) - set(self.terminals))
+
+        self.non_terminals = list(set(self._states) - set(self.terminals))
 
         # set boar attribute
         self.board: dict = {}
@@ -148,13 +151,13 @@ class Board:
                 self.board[n]['right'] = n
 
         # set policy attribute
-        if default_policy not in ['optimal', 'random']:
+        if default_policy not in ['burton', 'random']:
             raise ValueError(f"Invalid default policy {default_policy}.")
 
         if default_policy == 'random':
             self.policy = np.array(DEFAULT_STATE_POLICY * self.board_size)
-        if default_policy == 'optimal':
-            self.policy = OPTIMAL_POLICY
+        if default_policy == 'burton':
+            self.policy = BURTON_POLICY
 
     @property
     def graph(self) -> Graph:
@@ -174,6 +177,7 @@ class Board:
 
         """
         rv = grid_2d_graph(self.board_length, self.board_length)
+        # TODO: Fix the relabeling so shit works.
         rv = relabel_nodes(rv, {node: ix for ix, node in enumerate(rv.nodes)})
         rv = rv.to_directed()
         # fill terminal nodes policy manually
@@ -328,7 +332,7 @@ class Board:
 
         return policy_value
 
-    def iterate_policy(self) -> Tuple[ArrayLike, NDArray]:
+    def iterate_policy(self) -> NDArray:
         """
         Iterate policy to minimize loss.
 
@@ -370,7 +374,7 @@ class Board:
                     policy_stable = False
 
             if policy_stable:
-                return rv, self.policy
+                return self.policy
             else:
                 continue
 
@@ -417,7 +421,7 @@ class Board:
         if highlight_state:
             colors[highlight_state - 1] = 'yellow'
 
-        draw_networkx_nodes(G, pos, node_color=colors, node_shape='d', node_size=499)
+        draw_networkx_nodes(G, pos, node_color=colors, node_shape='d', node_size=299)
         draw_networkx_labels(G, pos, labels=labels)
 
         # set edges' properties and add to figure
