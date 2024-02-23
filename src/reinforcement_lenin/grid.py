@@ -410,16 +410,17 @@ class Board:
         """
         # define graph and positions for the nodes in the figure
         G = self.graph.copy()
+
         length = self.board_length
         pos = {node: ((node % length), length - (node // length)) for node in G.nodes}
 
         # set node's properties and init the figure with them
-        labels: dict = {n: n + 1 for n in G.nodes}
+        labels: dict = {n: n for n in G.nodes}
         colors: List[str] = ['mediumslateblue'] * self.board_size  # default node colors
         for n in self.terminals:
             colors[n] = 'black'
         if highlight_state:
-            colors[highlight_state - 1] = 'yellow'
+            colors[highlight_state] = 'yellow'
 
         draw_networkx_nodes(G, pos, node_color=colors, node_shape='d', node_size=299)
         draw_networkx_labels(G, pos, labels=labels)
@@ -495,9 +496,7 @@ def main(length, gamma, theta, reward, policy):
         discount_rate=gamma,
         reward=reward,
     )
-    print(juego_1.policy)
-    _, policy1 = juego_1.iterate_policy()
-    print(policy1)
+    _ = juego_1.iterate_policy()
     juego_1.draw_policy()
 
 
