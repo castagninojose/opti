@@ -351,8 +351,12 @@ class Board:
             Modified policy.
 
         """
+        iterations = 0
         while True:
+            iterations = iterations + 1
+            print(f"Iteración : {iterations}")
             rv = self.evaluate_policy()
+            print(f"Valor de la política: {rv}")
             policy_stable = True
             for state in self.non_terminals:
                 old_action = self.policy[state].copy()
