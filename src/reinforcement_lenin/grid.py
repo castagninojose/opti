@@ -75,9 +75,9 @@ class Board:
                 [-1, -1, -1, -1],
             ]
     graph : networkx.Graph
-        Graph representation of the current state of `self.policy`.
+        Graph representation of the state of `self.policy`. Used for visualizations only.
     board_as_np : numpy.NDArray
-        Board represented as numpy array of size (`N`², `N`).
+        Board represented as numpy array of size (`N`², `N`). (deprecated)
 
     """
 
@@ -107,8 +107,8 @@ class Board:
             policy iteration.
         policy : str, default='random'
             Default policy to adopt. If 'random'
-        terminals : list of int, default=[0] (first node only)
-            List of nodes to act as terminals for the game. Must be between 0 and `N - 1`.
+        terminals : list of int, default=None (first and last node only)
+            Nodes to act as terminals for the game. Must be between 0 and `N - 1`.
 
         """
         if N < 3:
@@ -177,7 +177,6 @@ class Board:
 
         """
         rv = grid_2d_graph(self.board_length, self.board_length)
-        # TODO: Fix the relabeling so shit works.
         rv = relabel_nodes(rv, {node: ix for ix, node in enumerate(rv.nodes)})
         rv = rv.to_directed()
         # fill terminal nodes policy manually
@@ -208,12 +207,16 @@ class Board:
 
         Parameters
         ----------
-        state: int
+        state : int
             Current state. Between 1 and `N`² - 2.
         future_state: int
             Future state. Between 1 and `N`² - 2.
-        action: str
+        action : str
             One of 'left', 'up', 'right' or 'down' (see ACTIONS@constants.py).
+        reward : float
+            Reward set for the game.
+        constant_reward : bool, default=True
+            Boolean indicating if the reward is a constant value or not.
 
         Returns
         -------
@@ -255,6 +258,8 @@ class Board:
             State to move to.
         policy_value : array-like, one-dimensional
             Array with current values.
+        reward : float
+            Reward set for the game.
 
         Returns
         -------
@@ -312,7 +317,6 @@ class Board:
         Returns
         -------
         policy_value : numpy.ArrayLike
-            ??????????????????????????
 
         """
         policy_value = np.zeros(len(self.board))
@@ -446,7 +450,7 @@ class Board:
 
         Edge weights (probabilities in `self.policy`) are scaled by `scale factor` for
         easier visualization. A copy of the original weights in string format is seen
-        when hovering over an edge.
+        when hovering an edge.
 
         Parameters
         ----------
@@ -488,7 +492,8 @@ class Board:
 @click.option(
     "--policy", "-p", required=False, default='random', help="Initial policy."
 )
-def main(length, gamma, theta, reward, policy):
+@click.option("--terminals", required=False, default=None, help="Terminal states.")
+def main(length, gamma, theta, reward, policy, terminals):
     print(f"Lado del tabero {length}")
     print(f"Gamma (discount_rate) {gamma}")
     print(f"Theta (Tolerance) {theta}")
@@ -499,6 +504,7 @@ def main(length, gamma, theta, reward, policy):
         tolerance=theta,
         discount_rate=gamma,
         reward=reward,
+        terminals=terminals,
     )
     _ = juego_1.iterate_policy()
     juego_1.draw_policy()
